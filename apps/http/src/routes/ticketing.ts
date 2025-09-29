@@ -11,8 +11,8 @@ import { sendTicketEmail } from "../utils/sendTicketEmail";
 
 const ticketRouter: Router = express.Router();
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface TicketPurchaseErrorResponse {
@@ -115,14 +115,15 @@ ticketRouter.post(
                 totalAmount: totalAmount.toNumber(),
                 transactionToken: token,
             };
-            const decryptedPrivateKey = decrypt(user.encrypted_private_key);
-            const signedTicketPayload = createSignedTicket(ticketPayload, decryptedPrivateKey);
 
-            const qrBuffer = await QRCode.toBuffer(
-                JSON.stringify({
-                    signedTicketPayload,
-                }),
+            const decryptedPrivateKey = decrypt(user.encrypted_private_key);
+            const signedTicketPayload = await createSignedTicket(
+                ticketPayload,
+                decryptedPrivateKey,
             );
+
+            const qrBuffer = await QRCode.toBuffer(JSON.stringify(signedTicketPayload));
+
             const fileName = `tickets/${userId}-${Date.now()}.png`;
             const { error: uploadError } = await supabase.storage
                 .from("tickets")
@@ -159,7 +160,8 @@ ticketRouter.post(
                 });
             });
 
-            //add ticketId of purchased in email as TXN<ticketId> or const purchasedTicketId = "TXN"+token;
+            // added ticketId of purchased in email as purchasedTicketId = "TXN"+token;
+            // During Purchase of ticket if passing token as : TXN<ticketId> then keep just token insteal of "TXN"+token in email else it gets repeated
             await sendTicketEmail({
                 attendeeName: `${user.first_name?.trim()} ${user.last_name?.trim()}`,
                 baseAmount: totalAmount.toNumber(),
@@ -178,6 +180,7 @@ ticketRouter.post(
                 quantity,
                 seats: `General Admission x${quantity}`,
                 totalPaid: totalAmount.toNumber(),
+                transactionId: `TXN${token}`,
             });
 
             res.status(200).json({
@@ -193,5 +196,88 @@ ticketRouter.post(
         }
     },
 );
+
+ticketRouter.get("/my", userMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId;
+        const ticketRecords = await db.ticket.findMany({
+            where: {
+                userId: userId,
+            },
+        });
+        if (ticketRecords.length === 0) {
+            return res.status(200).json({
+                message: "You dont have any tickets",
+            });
+        }
+        return res.status(200).json({
+            message: "Successfully retrieved the ticket-records",
+            ticketRecords: ticketRecords,
+        });
+    } catch (error) {
+        console.error("Internal error record", error);
+        return res.status(500).json({
+            error: "Internal error occured",
+            message: "Internal error occured",
+        });
+    }
+});
+
+ticketRouter.get("/:ticketId", userMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId;
+        const ticketId = req.params.ticketId;
+        const getRecord = await db.ticket.findFirst({
+            select: {
+                eventSlot: {
+                    select: {
+                        event: {
+                            select: {
+                                location_name: true,
+                                location_url: true,
+                                organiser: {
+                                    select: {
+                                        email: true,
+                                    },
+                                },
+                                status: true,
+                                title: true,
+                            },
+                        },
+                    },
+                },
+                eventSlotId: true,
+                is_valid: true,
+                signature: true,
+                user: {
+                    select: {
+                        email: true,
+                        first_name: true,
+                        last_name: true,
+                    },
+                },
+            },
+            where: {
+                id: ticketId,
+                userId,
+            },
+        });
+        if (!getRecord) {
+            return res.status(404).json({
+                message: "Invalid ticket id was provided or Ticket doesnt belong to you",
+            });
+        }
+        return res.status(200).json({
+            message: "Successfully retrieved the ticketDetail",
+            ticketDetail: getRecord,
+        });
+    } catch (error) {
+        console.error("Internal error record", error);
+        return res.status(500).json({
+            error: "Internal error occured",
+            message: "Internal error occured",
+        });
+    }
+});
 
 export default ticketRouter;

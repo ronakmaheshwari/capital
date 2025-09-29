@@ -52,6 +52,7 @@ const TicketEmailTemplate = (
         totalPaid: number;
         bookingDateTime: string;
         paymentType: string;
+        transactionId: string;
     },
 ) => `
 <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
@@ -101,6 +102,11 @@ const TicketEmailTemplate = (
       </div>
     </div>
 
+<p style="text-align:center; margin-top:12px; font-size:13px; color:#888;">
+  Ticket ID: <b>${ticket.transactionId}</b>
+</p>
+
+
     <div style="text-align:center; margin:20px 0;">
       <img src="${ticket.qrCodeUrl}" alt="QR Code" style="width:120px; height:120px;" />
       <p style="font-size:12px; color:#666; margin-top:8px;">
@@ -119,82 +125,180 @@ const TicketEmailTemplate = (
 `;
 
 // =================== Generate PDF ===================
-async function generateTicketPDF(
+export async function generateTicketPDF(
     ticket: TicketInfo & {
         attendeeName: string;
         quantity: number;
+        baseAmount: number;
+        gstRate: number;
+        gstAmount: number;
+        convenienceFee: number;
+        totalPaid: number;
+        bookingDateTime: string;
+        paymentType: string;
+        transactionId: string;
     },
 ): Promise<Buffer> {
     const doc = new PDFDocument({
-        margin: 25,
-        size: [
-            400,
-            550,
-        ],
+        margin: 30,
+        size: "A5",
     });
 
     const buffers: Buffer[] = [];
     doc.on("data", buffers.push.bind(buffers));
-
     const pdfEndPromise = new Promise<Buffer>((resolve, reject) => {
         doc.on("end", () => resolve(Buffer.concat(buffers)));
         doc.on("error", reject);
     });
 
-    // Background
-    doc.rect(0, 0, 400, 550).fill("#fdf6e3");
-
-    // Header
-    doc.fillColor("#1E90FF").fontSize(20).font("Helvetica-Bold");
-    doc.text((ticket.eventTitle || "Event").toUpperCase(), {
+    // ========== HEADER ==========
+    doc.rect(0, 0, doc.page.width, 50).fill("#1B1B1B");
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(18).text("Eventique", 0, 18, {
         align: "center",
     });
+    doc.moveDown(2);
 
-    doc.moveDown(0.5).fontSize(12).fillColor("#333").font("Helvetica");
-    doc.text(`Location: ${ticket.eventLocation || "Location"}`, {
+    // ========== EVENT DETAILS ==========
+    doc.font("Helvetica-Bold").fontSize(13).fillColor("#000").text("Event Details", {
         align: "center",
+        underline: true,
     });
+    doc.moveDown(0.8);
 
+    const eventValues = [
+        ticket.eventTitle,
+        ticket.eventLocation,
+        ticket.eventDate,
+        `${ticket.eventTime} IST`,
+    ];
+    eventValues.forEach((value) => {
+        doc.font("Helvetica").fontSize(11).fillColor("#333").text(value, {
+            align: "center",
+        });
+        doc.moveDown(0.3);
+    });
+    doc.moveDown(1);
+
+    // ========== ATTENDEE INFO ==========
+    doc.font("Helvetica-Bold").fontSize(13).fillColor("#000").text("Attendee Information", {
+        underline: true,
+    });
     doc.moveDown(0.5);
-    doc.text(`Time: ${ticket.eventTime || "00:00 - 00:00"} IST`, {
-        align: "center",
+
+    const attendeeItems = [
+        {
+            label: "Name",
+            value: ticket.attendeeName,
+        },
+        {
+            label: "Tickets",
+            value: `${ticket.quantity} x ${ticket.seats || "General Admission"}`,
+        },
+    ];
+    attendeeItems.forEach(({ label, value }) => {
+        doc.font("Helvetica").text(`${label}: `, {
+            continued: true,
+        });
+        doc.font("Helvetica-Bold").text(value);
     });
 
-    doc.moveDown(1).fontSize(14).font("Helvetica-Bold").fillColor("#000");
-    doc.text(`Attendee: ${ticket.attendeeName || "Attendee"}`, {
-        align: "left",
+    doc.moveDown(1);
+
+    // ========== ORDER SUMMARY ==========
+    doc.font("Helvetica-Bold").fontSize(13).fillColor("#000").text("Order Summary", {
+        underline: true,
+    });
+    doc.moveDown(0.5);
+
+    const orderSummary = [
+        {
+            label: "Transaction ID",
+            value: ticket.transactionId,
+        },
+        {
+            label: "Amount Paid",
+            value: `₹${ticket.totalPaid.toFixed(2)}`,
+        },
+        {
+            label: "Base Amount",
+            value: `₹${ticket.baseAmount.toFixed(2)}`,
+        },
+        {
+            label: `GST @ ${ticket.gstRate}%`,
+            value: `₹${ticket.gstAmount.toFixed(2)}`,
+        },
+        {
+            label: "Convenience Fee",
+            value: `₹${ticket.convenienceFee.toFixed(2)}`,
+        },
+        {
+            label: "Payment Method",
+            value: ticket.paymentType,
+        },
+        {
+            label: "Booking Time",
+            value: ticket.bookingDateTime,
+        },
+    ];
+    orderSummary.forEach(({ label, value }) => {
+        doc.font("Helvetica").text(`${label}: `, {
+            continued: true,
+        });
+        doc.font("Helvetica-Bold").text(value);
     });
 
-    doc.moveDown(0.5).fontSize(12).font("Helvetica").fillColor("#333");
-    doc.text(`Number of Tickets: ${ticket.quantity || 1}`, {
-        align: "left",
-    });
+    doc.moveDown(1);
 
-    // QR Code (handle fetch separately)
+    // ========== QR CODE ==========
     if (ticket.qrCodeUrl) {
         try {
             const response = await fetch(ticket.qrCodeUrl);
             const qrBuffer = await response.arrayBuffer();
-            doc.image(Buffer.from(qrBuffer), 140, 250, {
-                height: 120,
-                width: 120,
+
+            const imageSize = 110;
+            const centerX = (doc.page.width - imageSize) / 2;
+
+            doc.image(Buffer.from(qrBuffer), centerX, doc.y, {
+                align: "center",
+                fit: [
+                    imageSize,
+                    imageSize,
+                ],
             });
-        } catch (err) {
-            console.warn("QR code fetch failed:", err);
+
+            doc.moveDown(1.2);
+        } catch (_err) {
+            doc.fontSize(10).fillColor("red").text("QR Code could not be loaded.", {
+                align: "center",
+            });
         }
     }
 
-    // Footer
-    doc.moveDown(12).fontSize(10).fillColor("#555");
-    doc.text("Please carry a valid ID along with this ticket.", {
-        align: "center",
-    });
-    doc.text("This ticket is non-transferable and must be presented at entry.", {
+    // ========== FOOTER ==========
+    const footerY = doc.page.height - 50;
+    doc.y = footerY;
+
+    doc.moveTo(30, footerY)
+        .lineTo(doc.page.width - 30, footerY)
+        .stroke("#ccc");
+    doc.moveDown(0.5);
+
+    doc.fontSize(9)
+        .fillColor("#555")
+        .text(
+            "Please carry a valid photo ID with this ticket.\nNon-transferable • Non-refundable • GST as applicable",
+            {
+                align: "center",
+                lineGap: 2,
+            },
+        );
+
+    doc.moveDown(0.5);
+    doc.fillColor("#888").text("Powered by Eventique", {
         align: "center",
     });
 
     doc.end();
-
     return pdfEndPromise;
 }
 
@@ -211,6 +315,7 @@ export async function sendTicketEmail(
         totalPaid: number;
         bookingDateTime: string;
         paymentType: string;
+        transactionId: string;
     },
 ) {
     try {
@@ -259,3 +364,255 @@ export async function sendTicketEmail(
         console.error("❌ Error sending ticket email:", err);
     }
 }
+
+// // The below code is the code for sending ticket email with full invoice PDF generation using puppeteer and resend
+// // need to install chromium browser in server to use puppeteer
+// import dotenv from "dotenv";
+// import { Resend } from "resend";
+// import puppeteer from "puppeteer";
+// import QRCode from "qrcode";
+
+// dotenv.config();
+
+// const apiKey = process.env.RESEND_API_KEY;
+// if (!apiKey) throw new Error("Missing RESEND_API_KEY in environment");
+
+// const resend = new Resend(apiKey);
+
+// // Types
+// interface Item {
+//   description: string;
+//   quantity: number;
+//   unitPrice: number;
+//   sacCode?: string;
+// }
+
+// interface PDFData {
+//   invoiceNumber: string;
+//   date: string;
+//   customerName: string;
+//   customerEmail: string;
+//   items: Item[];
+//   gstRate: number;
+//   gstin: string;
+//   pan: string;
+//   totalPaid: number;
+//   transactionId: string;
+//   paymentMode: string;
+//   companyName: string;
+//   companyAddress: string;
+//   ticketId: string;
+//   eventFrom: string;
+//   eventTo: string;
+//   eventDate: string;
+//   eventTime: string;
+// }
+
+// interface Ticket {
+//   email: string;
+//   attendeeName: string;
+//   eventTitle: string;
+//   eventLocation: string;
+//   seats: string;
+//   quantity?: number;
+//   baseAmount?: number;
+//   gstRate?: number;
+//   gstin?: string;
+//   pan?: string;
+//   totalPaid?: number;
+//   transactionId?: string;
+//   paymentType?: string;
+//   bookingDateTime?: string;
+//   eventDate?: string;
+//   eventTime?: string;
+//   convenienceFee?: number;
+//   gstAmount?: number;
+//   organiser?: string;
+//   qrCodeUrl?: string;
+// }
+
+// // PDF Generator
+// export async function generateFullInvoicePDF(data: PDFData): Promise<Buffer> {
+//   const qrData = await QRCode.toDataURL(data.ticketId);
+//   const subtotal = data.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+//   const gstAmount = (subtotal * data.gstRate) / 100;
+//   const grandTotal = subtotal + gstAmount;
+
+//   const html = `
+//   <html>
+//     <head>
+//       <style>
+//         body { font-family: Arial; margin: 20px; }
+//         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+//         th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+//         h1 { text-align: center; }
+//         .page-break { page-break-after: always; }
+//         .footer { font-size: 10px; margin-top: 20px; color: #666; }
+//         .qr-wrapper {
+//           width: 350px;
+//           border: 2px dashed #ccc;
+//           border-radius: 20px;
+//           padding: 20px;
+//           margin: 0 auto;
+//           text-align: center;
+//         }
+//         .qr-ticket {
+//           font-size: 14px;
+//           margin-top: 15px;
+//         }
+//       </style>
+//     </head>
+//     <body>
+//       <h1>Tax Invoice</h1>
+//       <table>
+//         <tr><td><b>Invoice No:</b> ${data.invoiceNumber}</td><td><b>Date:</b> ${data.date}</td></tr>
+//         <tr><td><b>Customer:</b> ${data.customerName}</td><td><b>Email:</b> ${data.customerEmail}</td></tr>
+//         <tr><td><b>GSTIN:</b> ${data.gstin}</td><td><b>PAN:</b> ${data.pan}</td></tr>
+//         <tr><td colspan="2"><b>Company:</b> ${data.companyName}<br>${data.companyAddress}</td></tr>
+//       </table>
+
+//       <table>
+//         <tr>
+//           <th>Description</th><th>Qty</th><th>Price</th><th>Taxable</th><th>CGST</th><th>SGST</th><th>Total</th>
+//         </tr>
+//         ${data.items
+//           .map(
+//             (item) => `
+//             <tr>
+//               <td>${item.description}</td>
+//               <td>${item.quantity}</td>
+//               <td>${item.unitPrice.toFixed(2)}</td>
+//               <td>${(item.unitPrice * item.quantity).toFixed(2)}</td>
+//               <td>${((item.unitPrice * item.quantity * data.gstRate) / 200).toFixed(2)}</td>
+//               <td>${((item.unitPrice * item.quantity * data.gstRate) / 200).toFixed(2)}</td>
+//               <td>${(item.unitPrice * item.quantity * (1 + data.gstRate / 100)).toFixed(2)}</td>
+//             </tr>
+//           `
+//           )
+//           .join("")}
+//         <tr>
+//           <td colspan="3"><b>Total</b></td>
+//           <td><b>${subtotal.toFixed(2)}</b></td>
+//           <td colspan="2"><b>${(gstAmount / 2).toFixed(2)} each</b></td>
+//           <td><b>${grandTotal.toFixed(2)}</b></td>
+//         </tr>
+//       </table>
+
+//       <div class="footer">
+//         <p><b>Transaction ID:</b> ${data.transactionId}</p>
+//         <p><b>Payment Mode:</b> ${data.paymentMode}</p>
+//         <p><b>Total Paid:</b> ₹${data.totalPaid.toFixed(2)}</p>
+//         <p>Certified that the particulars are true and correct. Authorized Signatory.</p>
+//       </div>
+
+//       <div class="page-break"></div>
+
+//       <div class="qr-wrapper">
+//         <img src="${qrData}" width="180" height="180" />
+//         <div class="qr-ticket">
+//           <p><b>${data.ticketId}</b></p>
+//           <hr />
+//           <p><b>${data.eventFrom}</b> → <b>${data.eventTo}</b></p>
+//           <p><b>Date:</b> ${data.eventDate} (${data.eventTime})</p>
+//           <p><b>Passenger:</b> ${data.items.reduce((a, b) => a + b.quantity, 0)} People</p>
+//           <p><b>Amount:</b> ₹${data.totalPaid.toFixed(2)}</p>
+//         </div>
+//       </div>
+//     </body>
+//   </html>`;
+
+//   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+//   const page = await browser.newPage();
+//   await page.setContent(html, { waitUntil: "networkidle0" });
+
+//   const pdfUint8Array = await page.pdf({
+//     format: "A4",
+//     printBackground: true,
+//     margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+//   });
+
+//   await browser.close();
+
+//   // Convert Uint8Array to Buffer before returning
+//   return Buffer.from(pdfUint8Array);
+// }
+
+// // Email Template (keep as is)
+// const TicketEmailTemplate = (ticket: Ticket) => `
+//   <html>
+//     <body>
+//       <p>Hello ${ticket.attendeeName},</p>
+//       <p>Thank you for your purchase! Please find your ticket attached.</p>
+//       <p>Event: ${ticket.eventTitle}</p>
+//       <p>Date: ${ticket.eventDate} ${ticket.eventTime}</p>
+//       <p>Location: ${ticket.eventLocation}</p>
+//       <p>Seats: ${ticket.seats}</p>
+//       <p>Enjoy the event!</p>
+//       <p>Regards,<br/>Your Company</p>
+//     </body>
+//   </html>
+// `;
+
+// // Send Email
+// export async function sendTicketEmail(ticket: Ticket) {
+//   try {
+//     // Sanitize ticket fields
+//     ticket.email = ticket.email?.trim() || "";
+//     ticket.attendeeName = ticket.attendeeName?.trim() || "Attendee";
+//     ticket.eventTitle = ticket.eventTitle?.trim() || "Event";
+//     ticket.eventLocation = ticket.eventLocation?.trim() || "Location";
+//     ticket.seats = ticket.seats?.trim() || "General Admission";
+
+//     // Map ticket to PDF data
+//     const pdfData: PDFData = {
+//       invoiceNumber: ticket.transactionId || "N/A",
+//       date: ticket.bookingDateTime || new Date().toISOString().split("T")[0],
+//       customerName: ticket.attendeeName,
+//       customerEmail: ticket.email,
+//       items: [
+//         {
+//           description: ticket.eventTitle,
+//           quantity: ticket.quantity || 1,
+//           unitPrice: ticket.baseAmount || 0,
+//           sacCode: "",
+//         },
+//       ],
+//       gstRate: ticket.gstRate || 18,
+//       gstin: ticket.gstin || "YOUR_GSTIN_HERE",
+//       pan: ticket.pan || "YOUR_PAN_HERE",
+//       totalPaid: ticket.totalPaid || 0,
+//       transactionId: ticket.transactionId || "N/A",
+//       paymentMode: ticket.paymentType || "N/A",
+//       companyName: "Your Company Name",
+//       companyAddress: "Your Company Address",
+//       ticketId: ticket.transactionId || "N/A",
+//       eventFrom: ticket.eventLocation,
+//       eventTo: ticket.eventLocation,
+//       eventDate: ticket.eventDate || "N/A",
+//       eventTime: ticket.eventTime || "N/A",
+//     };
+
+//     // Generate PDF
+//     const pdfBuffer = await generateFullInvoicePDF(pdfData);
+
+//     // Send email with attachment
+//     await resend.emails.send({
+//       from: "onboarding@hire.10xdevs.me",
+//       to: ticket.email,
+//       subject: `🎟️ Your Ticket for ${ticket.eventTitle}`,
+//       html: TicketEmailTemplate(ticket),
+//       attachments: [
+//         {
+//           filename: "ticket.pdf",
+//           content: pdfBuffer.toString("base64"),
+//           contentType: "application/pdf",
+//         },
+//       ],
+//     });
+
+//     console.log("✅ Ticket email sent successfully!");
+//   } catch (error) {
+//     console.error("❌ Error sending ticket email:", error);
+//     throw error;
+//   }
+// }

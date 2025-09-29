@@ -32,7 +32,20 @@ services:
     depends_on:
       - postgres
       - redis
-
+  validator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.validator
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./apps/validator/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/postgres
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
   frontend:
     build:
       context: .

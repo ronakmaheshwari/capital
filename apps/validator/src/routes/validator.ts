@@ -1,19 +1,14 @@
 import db, { type Prisma } from "@repo/db";
-import { generateKeyPair } from "@repo/keygen";
 import { AlphabeticOTP, sendEmailOtp } from "@repo/notifications";
 import { SigninType, type SignupResponse, SignupType, VerificationType } from "@repo/types";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import express, { type Request, type Response, type Router } from "express";
 import jwt, { type SignOptions } from "jsonwebtoken";
-import userMiddleware from "../middleware";
-import { createCardsForUser } from "../utils/bankCards";
-import { decrypt, encrypt } from "../utils/encrypter";
-
-// have to Add public private key logic Cards logic OTP logic
+import validatorMiddleware from "../middleware";
 
 dotenv.config();
-const userRouter: Router = express.Router();
+const validatorRouter: Router = express.Router();
 
 const jwtSecret = process.env.JWT_SECRET as string;
 const saltRounds = parseInt(process.env.SALT_ROUNDS || "10", 10);
@@ -44,7 +39,7 @@ const generateToken = (id: string, expire?: string) =>
  * @param {Express.Response} res - The HTTP response object used to return data.
  * @returns {Promise<void>} - Responds with a JSON object containing user info and JWT token.
  */
-userRouter.post(
+validatorRouter.post(
     "/signup",
     async (req: Request, res: Response<SignupResponse | SignupErrorResponse>) => {
         try {
@@ -82,7 +77,7 @@ userRouter.post(
                     is_verified: false,
                     last_name: lastName,
                     password: hashedPassword,
-                    role: "user",
+                    role: "verifier",
                 },
             });
 
@@ -138,7 +133,7 @@ userRouter.post(
  * @param {Express.Response} res - The HTTP response object used to return data.
  * @returns {Promise<void>} - Responds with a JSON object containing user info and JWT token.
  */
-userRouter.post(
+validatorRouter.post(
     "/signin",
     async (req: Request, res: Response<SignupResponse | SignupErrorResponse>) => {
         try {
@@ -219,17 +214,18 @@ userRouter.post(
  * @param {Express.Response} res - The HTTP response object used to return data.
  * @returns {Promise<void>} - Responds with a JSON object containing user info and JWT token.
  */
-userRouter.post("/verify", userMiddleware, async (req: Request, res: Response) => {
+
+validatorRouter.post("/verify", validatorMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.userId;
-        const parseResult = VerificationType.safeParse(req.body);
-
-        if (!userId || !parseResult.success) {
+        const parsed = VerificationType.safeParse(req.body);
+        if (!userId || !parsed.success) {
             return res.status(400).json({
-                message: "Invalid userId or OTP format",
+                message: "Invalid request",
             });
         }
-        const { otp } = parseResult.data;
+
+        const { otp } = parsed.data;
         const otpRecord = await db.otp.findFirst({
             where: {
                 expires_at: {
@@ -240,11 +236,13 @@ userRouter.post("/verify", userMiddleware, async (req: Request, res: Response) =
                 userId,
             },
         });
+
         if (!otpRecord) {
             return res.status(400).json({
                 message: "Invalid or expired OTP",
             });
         }
+
         await db.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.otp.update({
                 data: {
@@ -254,16 +252,9 @@ userRouter.post("/verify", userMiddleware, async (req: Request, res: Response) =
                     id: otpRecord.id,
                 },
             });
-
-            const _cards = await createCardsForUser(userId);
-            const { publicKey, privateKey } = await generateKeyPair();
-            const encrypted_privateKey = encrypt(privateKey);
-
             await tx.user.update({
                 data: {
-                    encrypted_private_key: encrypted_privateKey,
                     is_verified: true,
-                    public_key: publicKey,
                 },
                 where: {
                     id: userId,
@@ -272,21 +263,22 @@ userRouter.post("/verify", userMiddleware, async (req: Request, res: Response) =
         });
 
         return res.status(200).json({
-            message: "OTP verified successfully",
+            message: "User verified successfully",
         });
-    } catch (_error) {
+    } catch (_err) {
         return res.status(500).json({
             message: "Internal server error",
         });
     }
 });
+
 /**
  * Logout the User after signup/signin
  * @param {Express.Request} req - The HTTP request object containing user details.
  * @param {Express.Response} res - The HTTP response object used to return data.
  * @returns {message: string} - Responds with a messaging.
  */
-userRouter.post("/logout", userMiddleware, async (req: Request, res: Response) => {
+validatorRouter.post("/logout", validatorMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.userId;
         await db.jwtToken.updateMany({
@@ -307,13 +299,14 @@ userRouter.post("/logout", userMiddleware, async (req: Request, res: Response) =
         });
     }
 });
+
 /**
  * Resets the User after signup/signin
  * @param {Express.Request} req - The HTTP request object containing user details.
  * @param {Express.Response} res - The HTTP response object used to return data.
  * @returns {message: string} - Responds with a messaging.
  */
-userRouter.post(
+validatorRouter.post(
     "/reset-password",
     async (
         req: Request,
@@ -362,207 +355,204 @@ userRouter.post(
         }
     },
 );
+
 /**
- * Get the User details after signup/signin
- * @param {Express.Request} req - The HTTP request object containing user details.
- * @param {Express.Response} res - The HTTP response object used to return data.
- * @returns {message: string} - Responds with a messaging.
+ * POST /validator/validate
+ * Validates a ticket for an event and marks it as scanned by the validator.
+ * @param {Express.Request} req - The HTTP request object containing ticketId in the body and validator's userId from the middleware.
+ * @param {Express.Response} res - The HTTP response object used to return validation result.
+ * @returns {success: boolean, ticket?: object, error?: string} - Returns updated ticket details if validation is successful, otherwise an error message.
  */
-userRouter.get("/me", userMiddleware, async (req: Request, res: Response) => {
+
+validatorRouter.post("/validate", async (req, res) => {
     try {
-        const userId = req.userId;
-        const result = await db.user.findUnique({
+        const { ticketId, verifierId } = req.body;
+
+        const ticket = await db.ticket.findUnique({
+            include: {
+                eventSlot: {
+                    include: {
+                        event: true,
+                    },
+                },
+            },
             where: {
-                id: userId,
+                id: ticketId,
             },
         });
-        let decryptPrivateKey: string | undefined;
-        if (typeof result?.encrypted_private_key === "string") {
-            decryptPrivateKey = decrypt(result.encrypted_private_key);
-        }
-        return res.status(200).json({
-            email: result?.email,
-            firstName: result?.first_name,
-            lastName: result?.last_name,
-            message: "User was successfully retrived",
-            privateKey: decryptPrivateKey,
-            proficPic: result?.profile_image_url,
-            publicKey: result?.public_key,
-        });
-    } catch (_error) {
-        return res.status(500).json({
-            message: "Internal server error",
-        });
-    }
-});
-/**
- * Patch the User details after signup/signin
- * @param {Express.Request} req - The HTTP request object containing user details.
- * @param {Express.Response} res - The HTTP response object used to return data.
- * @returns {message: string} - Responds with a messaging.
- */
-userRouter.put("/me", userMiddleware, async (req: Request, res: Response) => {
-    try {
-        const userId = req.userId;
-        const { firstName, lastName, profileImageUrl } = req.body;
 
-        if (!firstName && !lastName && !profileImageUrl) {
+        if (!ticket) {
+            await db.ticketVerification.create({
+                data: {
+                    is_successful: false,
+                    remarks: "Ticket not found",
+                    ticketId,
+                    verification_time: new Date(),
+                    verifierId,
+                },
+            });
+            return res.status(404).json({
+                error: "Ticket not found",
+                success: false,
+            });
+        }
+
+        if (!ticket.is_valid) {
+            await db.ticketVerification.create({
+                data: {
+                    is_successful: false,
+                    remarks: "Ticket already used/invalid",
+                    ticketId,
+                    verification_time: new Date(),
+                    verifierId,
+                },
+            });
             return res.status(400).json({
-                message: "At least one field must be provided",
+                error: "Ticket already used/invalid",
+                success: false,
             });
         }
 
-        const updatedUser = await db.user.update({
+        const updatedTicket = await db.ticket.update({
             data: {
-                ...(firstName && {
-                    first_name: firstName,
-                }),
-                ...(lastName && {
-                    last_name: lastName,
-                }),
-                ...(profileImageUrl && {
-                    profile_image_url: profileImageUrl,
-                }),
+                is_valid: false,
+                scanned_at: new Date(),
+                scanned_by: verifierId,
             },
             where: {
-                id: userId,
+                id: ticketId,
             },
         });
 
-        return res.status(200).json({
-            message: "User updated successfully",
-            user: {
-                email: updatedUser.email,
-                firstName: updatedUser.first_name,
-                id: updatedUser.id,
-                lastName: updatedUser.last_name,
-                profileImageUrl: updatedUser.profile_image_url,
+        await db.ticketVerification.create({
+            data: {
+                is_successful: true,
+                remarks: "Ticket validated successfully",
+                ticketId,
+                verification_time: new Date(),
+                verifierId,
             },
         });
-    } catch (_error) {
-        return res.status(500).json({
-            message: "Internal server error",
+
+        return res.json({
+            success: true,
+            ticket: updatedTicket,
+        });
+    } catch (err) {
+        console.error("Validation error:", err);
+        res.status(500).json({
+            error: "Internal server error",
+            success: false,
         });
     }
 });
 
 /**
- * Deletes the User after signup/signin
- * @param {Express.Request} req - The HTTP request object containing user details.
- * @param {Express.Response} res - The HTTP response object used to return data.
- * @returns {message: string} - Responds with a messaging.
+ * GET /validator/tickets/:ticketId
+ * Retrieves detailed information for a specific ticket by its ID.
+ * @param {Express.Request} req - The HTTP request object containing ticketId as a URL parameter.
+ * @param {Express.Response} res - The HTTP response object used to return the ticket data.
+ * @returns {success: boolean, ticket?: object, error?: string} - Returns ticket details if found, otherwise an error message.
  */
-userRouter.delete(
-    "/me",
-    userMiddleware,
-    async (
-        req: Request,
-        res: Response<{
-            message: string;
-        }>,
-    ) => {
-        try {
-            const userId = req.userId;
-            await db.$transaction([
-                db.otp.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.passwordResetToken.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.jwtToken.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.card.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.transaction.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.ticket.deleteMany({
-                    where: {
-                        userId,
-                    },
-                }),
-                db.event.deleteMany({
-                    where: {
-                        organiserId: userId,
-                    },
-                }),
-                db.user.delete({
-                    where: {
-                        id: userId,
-                    },
-                }),
-            ]);
-            return res.json({
-                message: "User and all related data deleted successfully",
-            });
-        } catch (_error) {
-            return res.status(500).json({
-                message: "Internal server error",
-            });
-        }
-    },
-);
 
-/**
- * GET /my/cards
- * Get all cards of the logged-in user
- */
-userRouter.get("/my/cards", userMiddleware, async (req: Request, res: Response) => {
+validatorRouter.get("/tickets/:ticketId", async (req, res) => {
     try {
-        const userId = req.userId;
+        const { ticketId } = req.params;
 
-        if (!userId) {
-            return res.status(403).json({
-                message: "User not authenticated",
-            });
-        }
-
-        const cards = await db.card.findMany({
-            orderBy: {
-                created_at: "desc",
-            },
-            select: {
-                balance: true,
-                bank_name: true,
-                card_number: true,
-                created_at: true,
-                id: true,
+        const ticket = await db.ticket.findUnique({
+            include: {
+                eventSlot: {
+                    include: {
+                        event: {
+                            select: {
+                                id: true,
+                                location_name: true,
+                                title: true,
+                            },
+                        },
+                    },
+                },
+                user: {
+                    select: {
+                        email: true,
+                        first_name: true,
+                        id: true,
+                        last_name: true,
+                    },
+                },
             },
             where: {
-                userId,
+                id: ticketId,
             },
         });
 
-        if (!cards.length) {
-            return res.status(200).json({
-                cards: [],
-                message: "No cards found for this user",
+        if (!ticket) {
+            return res.status(404).json({
+                error: "Ticket not found",
+                success: false,
             });
         }
 
-        return res.status(200).json({
-            cards,
-            message: "Cards retrieved successfully",
+        return res.json({
+            success: true,
+            ticket,
         });
-    } catch (error) {
-        console.error("Error fetching user cards:", error);
-        return res.status(500).json({
-            message: "Internal server error",
+    } catch (err) {
+        console.error("Get ticket error:", err);
+        res.status(500).json({
+            error: "Internal server error",
+            success: false,
         });
     }
 });
 
-export default userRouter;
+/**
+ * GET /validator/slots/:slotId/validated
+ * Lists all tickets for a specific event slot that have already been validated/scanned.
+ * @param {Express.Request} req - The HTTP request object containing slotId as a URL parameter.
+ * @param {Express.Response} res - The HTTP response object used to return a list of validated tickets.
+ * @returns {success: boolean, tickets?: Array<object>, error?: string} - Returns an array of validated tickets, or an error message if none found or an error occurs.
+ */
+
+validatorRouter.get("/slots/:slotId/validated", async (req, res) => {
+    try {
+        const { slotId } = req.params;
+
+        const tickets = await db.ticket.findMany({
+            include: {
+                scanned_by: {
+                    select: {
+                        first_name: true,
+                        id: true,
+                        last_name: true,
+                    },
+                },
+                user: {
+                    select: {
+                        email: true,
+                        first_name: true,
+                        id: true,
+                        last_name: true,
+                    },
+                },
+            },
+            where: {
+                eventSlotId: slotId,
+                is_valid: false,
+            },
+        });
+
+        return res.json({
+            success: true,
+            tickets,
+        });
+    } catch (err) {
+        console.error("List validated tickets error:", err);
+        res.status(500).json({
+            error: "Internal server error",
+            success: false,
+        });
+    }
+});
+
+export default validatorRouter;

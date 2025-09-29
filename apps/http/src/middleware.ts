@@ -24,13 +24,13 @@ if (!jwtSecret) {
 export default async function userMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
         const authHeader = req.headers.authorization;
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
-
-        if (!token || !token.startsWith("Bearer ")) {
-            return res.status(401).json({
-                message: "No token provided",
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(403).json({
+                message: "You are not logged in",
             });
         }
+
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
         let decoded: JwtPayload;
         try {
             decoded = jwt.verify(token, jwtSecret) as JwtPayload;
@@ -77,13 +77,12 @@ export default async function userMiddleware(req: Request, res: Response, next: 
 export async function organiserMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
         const authHeader = req.headers.authorization;
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
-
-        if (!token || !token.startsWith("Bearer ")) {
-            return res.status(401).json({
-                message: "No token provided",
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(403).json({
+                message: "You are not logged in",
             });
         }
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
         let decoded: JwtPayload;
         try {
             decoded = jwt.verify(token, jwtSecret) as JwtPayload;
