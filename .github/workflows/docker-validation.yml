@@ -2,9 +2,9 @@ name: Docker Environment Validation
 
 on:
   push:
-    branches: [main]
+    branches: [main,ronakmaheshwari-patch-1]
   pull_request:
-    branches: [main]
+    branches: [main,ronakmaheshwari-patch-1]
 
 jobs:
   docker-validate:
