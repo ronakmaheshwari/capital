@@ -5,6 +5,7 @@ import express, { type Request, type Response, type Router } from "express";
 import { deleteCache } from "../schedule/eventCache";
 
 const eventRouter: Router = express.Router();
+
 /**
  * Helper: Apply Filters from Query Params
  */
@@ -226,14 +227,12 @@ eventRouter.post("/:eventId/slots", async (req: Request, res: Response) => {
             });
         }
 
-        const { start_time, end_time, capacity, price } = parsed.data;
-
+        const { start_time, end_time, capacity } = parsed.data;
         const event = await db.event.findUnique({
             where: {
                 id: eventId,
             },
         });
-
         if (!event) {
             return res.status(404).json({
                 message: "Event not found",
@@ -245,13 +244,10 @@ eventRouter.post("/:eventId/slots", async (req: Request, res: Response) => {
                 capacity,
                 end_time: new Date(end_time),
                 eventId: event.id,
-                price,
                 start_time: new Date(start_time),
             },
         });
-
         await deleteCache();
-
         return res.status(201).json({
             message: "Event slot created successfully",
             slot,

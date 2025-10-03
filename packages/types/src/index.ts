@@ -67,15 +67,9 @@ export const EventType = z.object({
     title: z.string().min(3),
 });
 
-// export const EventSlotType = z.object({
-//     capacity: z.number().positive(),
-//     end_time: z.string().datetime(),
-//     start_time: z.string().datetime(),
-// });
 export const EventSlotType = z.object({
-    capacity: z.number().int().positive(),
+    capacity: z.number().positive(),
     end_time: z.string().datetime(),
-    price: z.number().nonnegative(), // ✅ added
     start_time: z.string().datetime(),
 });
 

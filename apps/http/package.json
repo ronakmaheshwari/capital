@@ -20,21 +20,16 @@
         "express": "^5.1.0",
         "jsonwebtoken": "^9.0.2",
         "morgan": "^1.10.1",
-        "multer": "^2.0.2",
         "node-cron": "^4.2.1",
         "node-fetch": "^3.3.2",
         "pdfkit": "^0.17.2",
-        "puppeteer": "^24.19.0",
         "qrcode": "^1.5.4",
-        "resend": "^6.0.3",
-        "sharp": "^0.34.3",
         "ts-node": "^10.9.2"
     },
     "description": "",
     "devDependencies": {
         "@repo/eslint-config": "*",
         "@repo/typescript-config": "*",
-        "@types/multer": "^2.0.0",
         "@types/pdfkit": "^0.17.2",
         "@types/qrcode": "^1.5.5"
     },
