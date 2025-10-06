@@ -5,6 +5,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import Image from "next/image";
 
 const MovieCarousel = () => {
   const movies = [
@@ -37,6 +38,13 @@ const MovieCarousel = () => {
                   src={movie.src}
                   alt={movie.title}
                   className="object-cover rounded-xl transition-transform duration-500 hover:scale-105 w-[222px] h-[378px]"
+                />
+                <Image
+                  src={movie.src}
+                  alt={movie.title}
+                  className="object-cover rounded-xl transition-transform duration-500 hover:scale-105 "
+                  width={222}
+                  height={378}
                 />
                 
               </div>

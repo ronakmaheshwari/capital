@@ -16,15 +16,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import Image from "next/image";
 
 
 const LNavbar = () => {
     return (
         <div className="relative flex items-center left-0 top-0">
-             <img
+            <Image
                 src="/assets/Eventique.png"
                 alt="Eventique"
-                className="w-[150px] h-[70px] p-4 ml-43 mt-0"
+                width={150}
+                height={70}
+                className="p-4 ml-43 mt-0"
             />
             
             <div className=" relative w-full max-w-xl rounded-2xl ">

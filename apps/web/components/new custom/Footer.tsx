@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
 import {
   FaFacebookF,
   FaInstagram,
@@ -17,10 +18,12 @@ const Footer: FC = () => {
       <div className="max-w-7xl mx-auto py-20">
         {/* Logo */}
         <div className="flex flex-col justify-center items-center w-full">
-          <img
+          <Image
             src="/assets/Eventique2.png"
-            alt="Eventique"
-            className="w-[200px]"
+            alt="Tagline"
+            className="w-[200px] mt-2"
+            width={300}
+            height={50}
           />
         </div>
 

@@ -7,6 +7,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import Image from "next/image";
 
 export default function CarouselComponent() {
   const banners = [
@@ -32,11 +33,14 @@ export default function CarouselComponent() {
               className="pl-4 basis-[85%] sm:basis-[80%] md:basis-[70%] lg:basis-[65%] xl:basis-[60%]"
             >
               <div className="overflow-hidden rounded-lg shadow-md">
-                <img
+                <Image
                   src={src}
                   alt={`Banner ${index + 1}`}
+                  width={1800}
+                  height={380}
                   className="w-full h-[380px] object-cover rounded-lg"
                 />
+
               </div>
             </CarouselItem>
           ))}
