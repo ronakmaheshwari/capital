@@ -4,7 +4,7 @@ declare global {
     var prisma: PrismaClient | undefined;
 }
 
-export const db =
+const database =
     global.prisma ??
     new PrismaClient({
         log: [
@@ -14,9 +14,9 @@ export const db =
         ],
     });
 
-if (process.env.NODE_ENV !== "production") global.prisma = db;
+if (process.env.NODE_ENV !== "production") global.prisma = database;
 
-export default db;
+export default database;
 
 export type { Prisma };
 

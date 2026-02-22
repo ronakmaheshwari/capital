@@ -21,6 +21,9 @@
     "license": "ISC",
     "main": "dist/database.js",
     "name": "@repo/monolith-db",
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
+    },
     "scripts": {
         "build": "tsc -b",
         "db:reset": "ts-node prisma/resetdb.ts",
