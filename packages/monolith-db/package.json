@@ -13,17 +13,14 @@
     },
     "exports": {
         ".": {
-            "require": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "require": "./dist/database.js",
+            "types": "./dist/database.d.ts"
         }
     },
     "keywords": [],
     "license": "ISC",
-    "main": "dist/index.js",
-    "name": "@repo/db",
-    "prisma": {
-        "seed": "ts-node prisma/seed.ts"
-    },
+    "main": "dist/database.js",
+    "name": "@repo/monolith-db",
     "scripts": {
         "build": "tsc -b",
         "db:reset": "ts-node prisma/resetdb.ts",

@@ -1,0 +1,27 @@
+{
+    "author": "",
+    "dependencies": {
+        "@repo/keygen": "*",
+        "@repo/monolith-db": "*",
+        "@repo/notifications": "*",
+        "@repo/ratelimit": "*",
+        "@repo/types": "*",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3"
+    },
+    "description": "",
+    "devDependencies": {
+        "@repo/typescript-config": "*"
+    },
+    "keywords": [],
+    "license": "ISC",
+    "main": "index.js",
+    "name": "monolith-backend",
+    "scripts": {
+        "build": "tsc -b",
+        "dev": "tsc -b && node ./dist/app.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "type": "commonjs",
+    "version": "1.0.0"
+}

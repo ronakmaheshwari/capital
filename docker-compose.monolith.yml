@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: ghcr.io/pgmq/pg18-pgmq:v1.10.0
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: monolith
+      POSTGRES_DB: monolith
+    ports:
+      - "5432:5432" 
+    volumes:
+      - monolith_data:/var/lib/postgresql
+    networks:
+      - monolith
+
+volumes:
+  monolith_data:
+
+networks:
+  monolith:
