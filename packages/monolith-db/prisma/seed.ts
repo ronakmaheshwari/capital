@@ -539,7 +539,7 @@ const pick = <T>(arr: T[]) => arr[rand(0, arr.length - 1)];
 const posterCache = new Map<string, string>();
 
 async function fetchPoster(imdbId: string) {
-    if (posterCache.has(imdbId)) return posterCache.get(imdbId)!;
+    if (posterCache.has(imdbId)) return posterCache.get(imdbId);
 
     try {
         const res = await fetch(
@@ -645,7 +645,7 @@ async function main() {
         }).map((_, i) => ({
             email: `user${i + 1}@mail.com`,
             first_name: `User${i + 1}`,
-            id: `user-${i + 1}`,
+            //id: `user-${i + 1}`,
             is_verified: true,
             last_name: "Demo",
             password: "Pass@123",

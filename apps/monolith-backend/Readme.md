@@ -175,3 +175,14 @@ Postgres
    └── PGMQ
          ├── otp_queue
          └── transaction_queue
+        
+FOR CQRS:-
+
+CREATE TABLE IF NOT EXISTS cache_metadata (
+    id TEXT PRIMARY KEY,
+    last_synced_at TIMESTAMP NOT NULL
+);
+
+INSERT INTO cache_metadata (id, last_synced_at)
+VALUES ('event_cache', '1970-01-01')
+ON CONFLICT (id) DO NOTHING;

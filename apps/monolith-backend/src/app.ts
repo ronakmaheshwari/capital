@@ -10,6 +10,7 @@ import swaggerUi from "swagger-ui-express";
 import YAML from "yaml";
 import { metricsMiddleware } from "./middleware";
 import router from "./routes/route";
+import syncEventCache from "./schedule/eventCacheSync";
 export const app: Express = express();
 export const port = process.env.PORT || 3001;
 
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use(morgan("dev"));
 app.use(metricsMiddleware);
 app.use("/api/v1", router);
+syncEventCache();
 
 const swaggerPath = path.resolve(process.cwd(), "../../swagger/http_spec.yaml");
 const swaggerOptions = {

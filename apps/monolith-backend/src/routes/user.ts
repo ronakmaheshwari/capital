@@ -1,6 +1,5 @@
-import redisCache from "@repo/cache";
-import db, { type Prisma } from "@repo/db";
 import { generateKeyPair } from "@repo/keygen";
+import database, { type Prisma } from "@repo/monolith-db";
 import { AlphabeticOTP } from "@repo/notifications";
 import { otpLimits, resetPasswordLimits } from "@repo/ratelimit";
 import {
@@ -22,6 +21,7 @@ import multer from "multer";
 import userMiddleware, { unVerifiedUserMiddleware } from "../middleware";
 import { createCardsForUser } from "../utils/bankCards";
 import { decrypt, encrypt } from "../utils/encrypter";
+import { otpQueueInsert } from "../workers/worker";
 
 dotenv.config();
 const userRouter: Router = express.Router();
@@ -32,9 +32,6 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const upload = multer();
-
-const client = redisCache;
-const Queue_name = "notification:initiate";
 
 if (!jwtSecret) {
     throw new Error("JWT_SECRET is not defined in environment variables");
@@ -77,7 +74,7 @@ userRouter.post(
 
             const { firstName, lastName, email, password } = parsed.data;
 
-            const existingUser = await db.user.findUnique({
+            const existingUser = await database.user.findUnique({
                 where: {
                     email,
                 },
@@ -96,7 +93,7 @@ userRouter.post(
             } else {
                 const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-                user = await db.user.create({
+                user = await database.user.create({
                     data: {
                         email,
                         first_name: firstName,
@@ -110,7 +107,7 @@ userRouter.post(
 
             const otp = AlphabeticOTP(6);
 
-            await db.otp.create({
+            await database.otp.create({
                 data: {
                     expires_at: new Date(Date.now() + 10 * 60 * 1000),
                     otp_code: otp,
@@ -119,18 +116,11 @@ userRouter.post(
                 },
             });
 
-            await client.rPush(
-                Queue_name,
-                JSON.stringify({
-                    email: user.email,
-                    otp,
-                    type: "email",
-                }),
-            );
+            otpQueueInsert(user.email, otp);
 
             const token = generateToken(user.id, "10m");
 
-            await db.jwtToken.create({
+            await database.jwtToken.create({
                 data: {
                     expires_at: new Date(Date.now() + 10 * 60 * 1000),
                     issued_at: new Date(),
@@ -182,7 +172,7 @@ userRouter.post(
 
             const { email, password } = parsed.data;
 
-            const user = await db.user.findUnique({
+            const user = await database.user.findUnique({
                 where: {
                     email,
                 },
@@ -216,7 +206,7 @@ userRouter.post(
 
             const token = generateToken(user.id, "1d");
 
-            await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            await database.$transaction(async (tx: Prisma.TransactionClient) => {
                 await tx.jwtToken.deleteMany({
                     where: {
                         userId: user.id,
@@ -274,7 +264,7 @@ userRouter.post(
                 });
             }
             const { otp } = parseResult.data;
-            const otpRecord = await db.otp.findFirst({
+            const otpRecord = await database.otp.findFirst({
                 where: {
                     expires_at: {
                         gt: new Date(),
@@ -289,7 +279,7 @@ userRouter.post(
                     message: "Invalid or expired OTP",
                 });
             }
-            const findUser = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            const findUser = await database.$transaction(async (tx: Prisma.TransactionClient) => {
                 await tx.otp.update({
                     data: {
                         is_used: true,
@@ -318,7 +308,7 @@ userRouter.post(
             });
 
             const token = generateToken(findUser.id, "1d");
-            await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            await database.$transaction(async (tx: Prisma.TransactionClient) => {
                 await tx.jwtToken.deleteMany({
                     where: {
                         userId: findUser.id,
@@ -354,7 +344,7 @@ userRouter.post(
 userRouter.get("/logout", userMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.userId;
-        await db.jwtToken.updateMany({
+        await database.jwtToken.updateMany({
             data: {
                 is_revoked: true,
             },
@@ -389,7 +379,7 @@ userRouter.post("/otp", otpLimits, async (req: Request, res: Response) => {
         }
         const { email } = parsed.data;
 
-        const findEmail = await db.user.findUnique({
+        const findEmail = await database.user.findUnique({
             where: {
                 email,
                 is_verified: true,
@@ -403,7 +393,7 @@ userRouter.post("/otp", otpLimits, async (req: Request, res: Response) => {
         }
 
         const otp = AlphabeticOTP(6);
-        const _createOtp = await db.otp.create({
+        const createOtp = await database.otp.create({
             data: {
                 expires_at: new Date(Date.now() + 15 * 60 * 1000),
                 otp_code: otp,
@@ -412,16 +402,7 @@ userRouter.post("/otp", otpLimits, async (req: Request, res: Response) => {
             },
         });
 
-        await client.rPush(
-            Queue_name,
-            JSON.stringify({
-                email: findEmail.email,
-                otp: otp,
-                reason: "forget-password",
-                type: "email",
-            }),
-        );
-
+        otpQueueInsert(findEmail.email, createOtp.otp_code);
         return res.status(200).json({
             message: `If your ${email} exists, a reset link will be sent`,
         });
@@ -449,7 +430,7 @@ userRouter.post("/forget-password", resetPasswordLimits, async (req: Request, re
             });
         }
         const { email, otp, newpassword } = parsed.data;
-        const findEmail = await db.user.findUnique({
+        const findEmail = await database.user.findUnique({
             where: {
                 email,
                 is_verified: true,
@@ -462,7 +443,7 @@ userRouter.post("/forget-password", resetPasswordLimits, async (req: Request, re
             });
         }
 
-        const otpRecord = await db.otp.findFirst({
+        const otpRecord = await database.otp.findFirst({
             where: {
                 otp_code: otp,
                 userId: findEmail.id,
@@ -489,7 +470,7 @@ userRouter.post("/forget-password", resetPasswordLimits, async (req: Request, re
 
         const hashedPassword = await bcrypt.hash(newpassword, saltRounds);
 
-        await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        await database.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.otp.update({
                 data: {
                     is_used: true,
@@ -547,7 +528,7 @@ userRouter.post(
                 });
             }
             const { newpassword, password } = parsedData.data;
-            const userExist = await db.user.findUnique({
+            const userExist = await database.user.findUnique({
                 select: {
                     email: true,
                     id: true,
@@ -572,7 +553,7 @@ userRouter.post(
             }
 
             const hashedPassword = await bcrypt.hash(newpassword, saltRounds);
-            await db.user.update({
+            await database.user.update({
                 data: {
                     password: hashedPassword,
                 },
@@ -600,7 +581,7 @@ userRouter.post(
 userRouter.get("/me", userMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.userId;
-        const result = await db.user.findUnique({
+        const result = await database.user.findUnique({
             where: {
                 id: userId,
                 is_verified: true,
@@ -642,7 +623,7 @@ userRouter.get("/me", userMiddleware, async (req: Request, res: Response) => {
 userRouter.get("/profile", userMiddleware, async (req: Request, res: Response) => {
     try {
         const user = req.userId;
-        const findUser = await db.user.findUnique({
+        const findUser = await database.user.findUnique({
             select: {
                 first_name: true,
                 profile_image_url: true,
@@ -709,7 +690,7 @@ userRouter.put(
                 publicUrl = data.publicUrl;
             }
 
-            const updatedUser = await db.user.update({
+            const updatedUser = await database.user.update({
                 data: {
                     ...(firstName && {
                         first_name: firstName,
@@ -778,43 +759,43 @@ userRouter.delete(
     ) => {
         try {
             const userId = req.userId;
-            await db.$transaction([
-                db.otp.deleteMany({
+            await database.$transaction([
+                database.otp.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.passwordResetToken.deleteMany({
+                database.passwordResetToken.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.jwtToken.deleteMany({
+                database.jwtToken.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.card.deleteMany({
+                database.card.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.transaction.deleteMany({
+                database.transaction.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.ticket.deleteMany({
+                database.ticket.deleteMany({
                     where: {
                         userId,
                     },
                 }),
-                db.event.deleteMany({
+                database.event.deleteMany({
                     where: {
                         organiserId: userId,
                     },
                 }),
-                db.user.delete({
+                database.user.delete({
                     where: {
                         id: userId,
                     },
@@ -845,7 +826,7 @@ userRouter.get("/my/cards", userMiddleware, async (req: Request, res: Response) 
             });
         }
 
-        const cards = await db.card.findMany({
+        const cards = await database.card.findMany({
             orderBy: {
                 created_at: "desc",
             },

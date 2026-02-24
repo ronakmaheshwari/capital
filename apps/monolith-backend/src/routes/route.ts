@@ -1,9 +1,9 @@
 import { Router } from "express";
-import userRouter from "./user";
 import eventRouter from "./event";
 import organiserRouter from "./organiser";
 import ticketRouter from "./ticketing";
 import transactionRouter from "./transactions";
+import userRouter from "./user";
 import validatorRouter from "./validator";
 import webhookRouter from "./webhook";
 
@@ -17,32 +17,32 @@ interface RouterInterface {
 const AllRouter: RouterInterface[] = [
     {
         path: "/user",
-        router: userRouter
+        router: userRouter,
     },
     {
         path: "/events",
-        router: eventRouter
+        router: eventRouter,
     },
     {
         path: "/organiser",
-        router: organiserRouter
+        router: organiserRouter,
     },
     {
         path: "/tickets",
-        router: ticketRouter
+        router: ticketRouter,
     },
     {
         path: "/transactions",
-        router: transactionRouter
+        router: transactionRouter,
     },
     {
         path: "/webhook",
-        router: webhookRouter
+        router: webhookRouter,
     },
     {
         path: "/validator",
-        router: validatorRouter
-    }
+        router: validatorRouter,
+    },
 ];
 
 AllRouter.forEach((x) => {

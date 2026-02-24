@@ -1,17 +1,11 @@
-import redisCache from "@repo/cache";
-import db, {
-    type EventCategory,
-    type EventGenre,
-    type EventLanguage,
-    type EventStatus,
-    type Prisma,
-} from "@repo/db";
+import database, { type Prisma } from "@repo/monolith-db";
 import { EventSlotType, EventType, UpdateEventSlotSchema, updateEventSchema } from "@repo/types";
 import Decimal from "decimal.js";
 import express, { type Request, type Response, type Router } from "express";
 import { formatDate, formatTime } from "../helper/date";
 import userMiddleware, { organiserMiddleware } from "../middleware";
-import deleteCache from "../schedule/eventCache";
+import { syncEventToCache } from "../schedule/eventCacheSync";
+import eventMemoryCache, { slotMemoryCache } from "../utils/lru";
 
 const eventRouter: Router = express.Router();
 
@@ -41,7 +35,7 @@ eventRouter.post("/", organiserMiddleware, async (req: Request, res: Response) =
             is_online,
         } = parsed.data;
 
-        const organiser = await db.user.findUnique({
+        const organiser = await database.user.findUnique({
             where: {
                 id: organiserId,
             },
@@ -52,7 +46,7 @@ eventRouter.post("/", organiserMiddleware, async (req: Request, res: Response) =
             });
         }
 
-        const newEvent = await db.event.create({
+        const newEvent = await database.event.create({
             data: {
                 banner_url,
                 category,
@@ -66,7 +60,9 @@ eventRouter.post("/", organiserMiddleware, async (req: Request, res: Response) =
                 title,
             },
         });
-        await deleteCache();
+
+        await syncEventToCache(newEvent.id);
+
         return res.status(201).json({
             event: newEvent,
             message: "Event successfully created",
@@ -86,7 +82,7 @@ eventRouter.get("/", async (req: Request, res: Response) => {
     try {
         const {
             status,
-            organiser,
+            //organiser,
             title,
             location,
             category,
@@ -109,164 +105,103 @@ eventRouter.get("/", async (req: Request, res: Response) => {
         const limitNum = Math.max(1, Number(limit));
         const isAll = all === "true";
 
-        const cacheKey = `events:${JSON.stringify({
-            category,
-            date,
-            endDate,
-            genre,
-            isOnline,
-            language,
-            limit: isAll ? "all" : limitNum,
-            location,
-            maxPrice,
-            minPrice,
-            order,
-            organiser,
-            page: isAll ? "all" : pageNum,
-            sortBy,
-            startDate,
-            status,
-            title,
-        })}`;
+        const cacheKey = `events:${JSON.stringify(req.query)}`;
 
-        const cached = await redisCache.get(cacheKey);
-        if (cached) {
-            return res.json(JSON.parse(cached.toString()));
+        const lruCache = eventMemoryCache.get(cacheKey);
+        if (lruCache) {
+            return res.status(200).json({
+                data: lruCache,
+                message: "Data was fetched from LRU Cache",
+            });
         }
 
-        const slotFilters: Prisma.EventSlotWhereInput = {
-            ...(location && {
-                location_name: {
-                    contains: location as string,
-                    mode: "insensitive",
-                },
-            }),
-            ...(minPrice && {
-                price: {
-                    gte: Number(minPrice),
-                },
-            }),
-            ...(maxPrice && {
-                price: {
-                    lte: Number(maxPrice),
-                },
-            }),
-            ...(date && {
-                event_date: new Date(date as string),
-            }),
-            ...(startDate || endDate
-                ? {
-                      event_date: {
-                          ...(startDate && {
-                              gte: new Date(startDate as string),
-                          }),
-                          ...(endDate && {
-                              lte: new Date(endDate as string),
-                          }),
-                      },
-                  }
-                : {}),
-        };
+        const values = [];
+        const filters = [];
 
-        const where: Prisma.EventWhereInput = {
-            ...(status && {
-                status: status as EventStatus,
-            }),
-            ...(category && {
-                category: category as EventCategory,
-            }),
-            ...(genre && {
-                genre: genre as EventGenre,
-            }),
-            ...(language && {
-                language: language as EventLanguage,
-            }),
-            ...(isOnline !== undefined && {
-                is_online: isOnline === "true",
-            }),
-            ...(title && {
-                title: {
-                    contains: title as string,
-                    mode: "insensitive",
-                },
-            }),
-            ...(organiser && {
-                organiser: {
-                    first_name: {
-                        contains: organiser as string,
-                        mode: "insensitive",
-                    },
-                },
-            }),
-            ...(Object.keys(slotFilters).length && {
-                slots: {
-                    some: slotFilters,
-                },
-            }),
-            status: {
-                not: "draft",
-            },
-        };
-
-        const total = await db.event.count({
-            where,
-        });
-
-        const events = await db.event.findMany({
-            include: {
-                organiser: {
-                    select: {
-                        first_name: true,
-                        id: true,
-                    },
-                },
-                slots: true,
-            },
-            where,
-            ...(isAll
-                ? {}
-                : {
-                      skip: (pageNum - 1) * limitNum,
-                      take: limitNum,
-                  }),
-            orderBy:
-                sortBy === "price"
-                    ? {
-                          created_at: "desc",
-                      }
-                    : {
-                          [sortBy as string]: order,
-                      },
-        });
-
-        const enriched = events.map((event) => {
-            const prices = event.slots.map((s) => Number(s.price)).filter((p) => !Number.isNaN(p));
-
-            return {
-                ...event,
-                maxPrice: prices.length ? Math.max(...prices) : 0,
-                startingPrice: prices.length ? Math.min(...prices) : 0,
-            };
-        });
-
-        if (sortBy === "price") {
-            enriched.sort((a, b) =>
-                order === "asc"
-                    ? a.startingPrice - b.startingPrice
-                    : b.startingPrice - a.startingPrice,
-            );
+        if (status) {
+            values.push(status);
+            filters.push(`e.status = $${values.length}`);
         }
 
+        if (category) {
+            values.push(category);
+            filters.push(`e.category = $${values.length}`);
+        }
+
+        if (genre) {
+            values.push(genre);
+            filters.push(`e.genre = $${values.length}`);
+        }
+
+        if (language) {
+            values.push(language);
+            filters.push(`e.language = $${values.length}`);
+        }
+
+        if (isOnline !== undefined) {
+            values.push(isOnline === "true");
+            filters.push(`e.is_online = $${values.length}`);
+        }
+
+        if (title) {
+            values.push(`%${title}%`);
+            filters.push(`e.title ILIKE $${values.length}`);
+        }
+
+        if (location) {
+            values.push(`%${location}%`);
+            filters.push(`es.location_name ILIKE $${values.length}`);
+        }
+
+        if (minPrice) {
+            values.push(Number(minPrice));
+            filters.push(`es.price >= $${values.length}`);
+        }
+
+        if (maxPrice) {
+            values.push(Number(maxPrice));
+            filters.push(`es.price <= $${values.length}`);
+        }
+
+        if (date) {
+            values.push(new Date(date as string));
+            filters.push(`DATE(es.event_date) = $${values.length}`);
+        }
+
+        if (startDate) {
+            values.push(new Date(startDate as string));
+            filters.push(`es.event_date >= $${values.length}`);
+        }
+
+        if (endDate) {
+            values.push(new Date(endDate as string));
+            filters.push(`es.event_date <= $${values.length}`);
+        }
+
+        filters.push(`e.status != 'draft'`);
+
+        const whereClause = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+        const query = `
+            SELECT e.*,
+                    MIN(es.price) as "startingPrice",
+                    MAX(es.price) as "maxPrice"
+            FROM event_cache e
+            LEFT JOIN event_slot_cache es ON e.id = es.event_id
+            ${whereClause}
+            GROUP BY e.id
+            ORDER BY ${sortBy === "price" ? `"startingPrice"` : `e.${sortBy}`} ${order}
+            ${isAll ? "" : `LIMIT ${limitNum} OFFSET ${(pageNum - 1) * limitNum}`}
+        `;
+
+        const events = await database.$queryRawUnsafe(query, ...values);
         const response = {
-            events: enriched,
+            events: Array.isArray(events) ? events : [],
             limit: isAll ? null : limitNum,
             page: isAll ? null : pageNum,
-            total,
+            total: Array.isArray(events) ? events.length : 0,
         };
 
-        await redisCache.set(cacheKey, JSON.stringify(response), {
-            EX: 30,
-        });
+        eventMemoryCache.set(cacheKey, response);
 
         return res.json(response);
     } catch (error) {
@@ -282,7 +217,7 @@ eventRouter.get("/:id", organiserMiddleware, async (req: Request, res: Response)
         const user = req.organiserId;
         const { id } = req.params;
 
-        const getEvent = await db.event.findUnique({
+        const getEvent = await database.event.findUnique({
             select: {
                 banner_url: true,
                 category: true,
@@ -313,7 +248,7 @@ eventRouter.get("/:id", organiserMiddleware, async (req: Request, res: Response)
             });
         }
 
-        const totalSlots = await db.eventSlot.count({
+        const totalSlots = await database.eventSlot.count({
             where: {
                 eventId: id,
             },
@@ -358,7 +293,7 @@ eventRouter.patch("/:id", organiserMiddleware, async (req: Request, res: Respons
         }
         const updateBody = parsed.data;
 
-        const getEvent = await db.event.findUnique({
+        const getEvent = await database.event.findUnique({
             where: {
                 id: id,
             },
@@ -376,12 +311,14 @@ eventRouter.patch("/:id", organiserMiddleware, async (req: Request, res: Respons
             });
         }
 
-        await db.event.update({
+        const updatedEvent = await database.event.update({
             data: updateBody,
             where: {
                 id,
             },
         });
+
+        await syncEventToCache(updatedEvent.id);
 
         return res.status(200).json({
             message: "Event data updated successfully",
@@ -402,7 +339,7 @@ eventRouter.delete("/:id", organiserMiddleware, async (req: Request, res: Respon
         const { id } = req.params;
         const user = req.organiserId;
 
-        const event = await db.event.findUnique({
+        const event = await database.event.findUnique({
             include: {
                 slots: {
                     include: {
@@ -437,20 +374,20 @@ eventRouter.delete("/:id", organiserMiddleware, async (req: Request, res: Respon
             });
         }
 
-        await db.$transaction([
-            db.eventSlot.deleteMany({
+        await database.$transaction([
+            database.eventSlot.deleteMany({
                 where: {
                     eventId: id,
                 },
             }),
-            db.event.delete({
+            database.event.delete({
                 where: {
                     id,
                 },
             }),
         ]);
 
-        await deleteCache();
+        await syncEventToCache(event.id);
         return res.status(200).json({
             message: "Event deleted successfully",
         });
@@ -483,7 +420,7 @@ eventRouter.post("/:eventId/slots", organiserMiddleware, async (req: Request, re
         const startDateTime = new Date(`${event_date}T${start_time}:00Z`);
         const endDateTime = new Date(`${event_date}T${end_time}:00Z`);
 
-        const event = await db.event.findUnique({
+        const event = await database.event.findUnique({
             where: {
                 id: eventId,
             },
@@ -502,7 +439,7 @@ eventRouter.post("/:eventId/slots", organiserMiddleware, async (req: Request, re
             });
         }
 
-        const slot = await db.eventSlot.create({
+        const slot = await database.eventSlot.create({
             data: {
                 capacity,
                 end_time: endDateTime,
@@ -515,7 +452,7 @@ eventRouter.post("/:eventId/slots", organiserMiddleware, async (req: Request, re
             },
         });
 
-        await deleteCache();
+        await syncEventToCache(slot.eventId);
 
         return res.status(201).json({
             message: "Event slot created successfully",
@@ -531,152 +468,148 @@ eventRouter.post("/:eventId/slots", organiserMiddleware, async (req: Request, re
 /**
  * Get all slots for an event
  */
-eventRouter.get("/:eventId/slots", async (req: Request, res: Response) => {
+eventRouter.get("/:eventId/slots", async (req, res) => {
     try {
         const { eventId } = req.params;
         const { location, capacity, event_date, minPrice, maxPrice } = req.query;
 
         const cacheKey = `eventSlots:${eventId}:${JSON.stringify(req.query)}`;
 
-        const cached = await redisCache.get(cacheKey);
-        if (cached) {
-            return res.status(200).json(JSON.parse(cached.toString()));
+        const memory = slotMemoryCache.get(cacheKey);
+        if (memory) {
+            return res.status(200).json(memory);
         }
 
-        const event = await db.event.findUnique({
-            select: {
-                banner_url: true,
-                category: true,
-                description: true,
-                genre: true,
-                hero_image_url: true,
-                id: true,
-                is_online: true,
-                language: true,
-                title: true,
+        const values: any[] = [];
+        const filters: string[] = [];
+
+        values.push(eventId);
+        filters.push(`es.event_id = $${values.length}`);
+
+        if (location) {
+            values.push(location);
+            filters.push(`LOWER(es.location_name) = LOWER($${values.length})`);
+        }
+
+        if (capacity) {
+            values.push(Number(capacity));
+            filters.push(`es.capacity >= $${values.length}`);
+        }
+
+        if (event_date) {
+            values.push(new Date(`${event_date}T00:00:00.000Z`));
+            values.push(new Date(`${event_date}T23:59:59.999Z`));
+            filters.push(`es.event_date BETWEEN $${values.length - 1} AND $${values.length}`);
+        }
+
+        if (minPrice) {
+            values.push(Number(minPrice));
+            filters.push(`es.price >= $${values.length}`);
+        }
+
+        if (maxPrice) {
+            values.push(Number(maxPrice));
+            filters.push(`es.price <= $${values.length}`);
+        }
+
+        const slotQuery = `
+      SELECT es.*
+      FROM event_slot_cache es
+      WHERE ${filters.join(" AND ")}
+      ORDER BY es.event_date ASC, es.start_time ASC
+    `;
+
+        const cachedSlots: any[] = await database.$queryRawUnsafe(slotQuery, ...values);
+
+        const event = await database.$queryRawUnsafe<any[]>(
+            `SELECT * FROM event_cache WHERE id = $1`,
+            eventId,
+        );
+
+        if (cachedSlots.length > 0 && event.length > 0) {
+            const formattedSlots = cachedSlots.map((slot) => ({
+                capacity: slot.capacity,
+                endTime: formatTime(slot.end_time),
+                eventDate: formatDate(slot.event_date),
+                id: slot.id,
+                location: slot.location_name,
+                locationUrl: slot.location_url,
+                price: Number(slot.price),
+                raw: {
+                    end_time: slot.end_time,
+                    event_date: slot.event_date,
+                    start_time: slot.start_time,
+                },
+                startTime: formatTime(slot.start_time),
+            }));
+
+            const response = {
+                event: event[0],
+                meta: {
+                    filteredSlots: formattedSlots.length,
+                    totalSlots: cachedSlots.length,
+                },
+                slots: formattedSlots,
+            };
+
+            slotMemoryCache.set(cacheKey, response);
+            return res.status(200).json(response);
+        }
+
+        const eventSource = await database.event.findUnique({
+            include: {
+                slots: true,
             },
             where: {
                 id: eventId,
             },
         });
 
-        if (!event) {
+        if (!eventSource) {
             return res.status(404).json({
                 message: "Event not found",
             });
         }
 
-        const [allLocations, totalSlots] = await Promise.all([
-            db.eventSlot.findMany({
-                distinct: [
-                    "location_name",
-                ],
-                select: {
-                    location_name: true,
-                },
-                where: {
-                    eventId,
-                },
-            }),
-            db.eventSlot.count({
-                where: {
-                    eventId,
-                },
-            }),
-        ]);
+        syncEventToCache(eventId).catch(console.error);
 
-        const slotWhere: Prisma.EventSlotWhereInput = {
-            eventId,
-
-            ...(location && {
-                location_name: {
-                    equals: String(location),
-                    mode: "insensitive",
-                },
-            }),
-
-            ...(capacity && {
-                capacity: {
-                    gte: Number(capacity),
-                },
-            }),
-
-            ...(event_date && {
-                event_date: {
-                    gte: new Date(`${event_date}T00:00:00.000Z`),
-                    lt: new Date(`${event_date}T23:59:59.999Z`),
-                },
-            }),
-
-            ...(minPrice || maxPrice
-                ? {
-                      price: {
-                          ...(minPrice && {
-                              gte: Number(minPrice),
-                          }),
-                          ...(maxPrice && {
-                              lte: Number(maxPrice),
-                          }),
-                      },
-                  }
-                : {}),
-        };
-
-        const slots = await db.eventSlot.findMany({
-            orderBy: [
-                {
-                    event_date: "asc",
-                },
-                {
-                    start_time: "asc",
-                },
-            ],
-            where: slotWhere,
-        });
-
-        const formattedSlots = slots.map((slot) => ({
+        const formattedSlots = eventSource.slots.map((slot) => ({
             capacity: slot.capacity,
             endTime: formatTime(slot.end_time),
-
             eventDate: formatDate(slot.event_date),
             id: slot.id,
             location: slot.location_name,
             locationUrl: slot.location_url,
             price: Number(slot.price),
-
             raw: {
-                end_time: slot.end_time.toISOString(),
-                event_date: slot.event_date.toISOString(),
-                start_time: slot.start_time.toISOString(),
+                end_time: slot.end_time,
+                event_date: slot.event_date,
+                start_time: slot.start_time,
             },
             startTime: formatTime(slot.start_time),
         }));
 
         const response = {
-            event,
+            event: eventSource,
             meta: {
                 filteredSlots: formattedSlots.length,
-                locations: allLocations.map((l) => l.location_name),
-                totalSlots,
+                totalSlots: formattedSlots.length,
             },
             slots: formattedSlots,
         };
 
-        await redisCache.set(cacheKey, JSON.stringify(response), {
-            EX: 30,
-        });
+        slotMemoryCache.set(cacheKey, response);
 
         return res.status(200).json(response);
     } catch (error) {
         console.error("EVENT SLOT ERROR:", error);
-
         return res.status(500).json({
             message: "Internal server error",
         });
     }
 });
 
-eventRouter.get("/:eventId/:slotId", userMiddleware, async (req: Request, res: Response) => {
+eventRouter.get("/:eventId/:slotId", userMiddleware, async (req, res) => {
     try {
         const user = req.userId;
         if (!user) {
@@ -684,30 +617,38 @@ eventRouter.get("/:eventId/:slotId", userMiddleware, async (req: Request, res: R
                 message: "Unauthorized user tried to access service",
             });
         }
+
         const { eventId, slotId } = req.params;
-        if (!eventId || !slotId) {
-            return res.status(404).json({
-                message: `EventId or SlotID was not provided`,
-            });
-        }
-        const eventFinder = await db.event.findUnique({
-            where: {
-                id: eventId,
-                slots: {
-                    some: {
-                        id: slotId,
-                    },
-                },
-            },
-        });
 
-        if (!eventFinder) {
-            return res.status(404).json({
-                message: "Invalid EventId or SlotId was provided",
-            });
+        const cacheKey = `singleSlot:${eventId}:${slotId}`;
+
+        const memory = slotMemoryCache.get(cacheKey);
+        if (memory) {
+            return res.status(200).json(memory);
         }
 
-        const findSlot = await db.eventSlot.findUnique({
+        const slot = await database.$queryRawUnsafe<any[]>(
+            `
+      SELECT es.*, e.title, e.banner_url
+      FROM event_slot_cache es
+      JOIN event_cache e ON e.id = es.event_id
+      WHERE es.id = $1 AND es.event_id = $2
+      `,
+            slotId,
+            eventId,
+        );
+
+        if (slot.length > 0) {
+            const response = {
+                message: "Data was fetched successfully",
+                slot: slot[0],
+            };
+
+            slotMemoryCache.set(cacheKey, response);
+            return res.status(200).json(response);
+        }
+
+        const findSlot = await database.eventSlot.findUnique({
             include: {
                 event: true,
             },
@@ -722,12 +663,18 @@ eventRouter.get("/:eventId/:slotId", userMiddleware, async (req: Request, res: R
             });
         }
 
-        return res.status(200).json({
+        syncEventToCache(eventId).catch(console.error);
+
+        const response = {
             message: "Data was fetched successfully",
             slot: findSlot,
-        });
+        };
+
+        slotMemoryCache.set(cacheKey, response);
+
+        return res.status(200).json(response);
     } catch (error) {
-        console.error("EVENT SLOT Couldnt be found ERROR:", error);
+        console.error("EVENT SLOT ERROR:", error);
         return res.status(500).json({
             message: "Internal server error",
         });
@@ -753,7 +700,7 @@ eventRouter.patch(
             );
             const endDateTime = new Date(`${updatedData.event_date}T${updatedData.end_time}:00Z`);
 
-            const findEvent = await db.event.findUnique({
+            const findEvent = await database.event.findUnique({
                 where: {
                     id: eventId,
                 },
@@ -770,7 +717,7 @@ eventRouter.patch(
                     message: "You are unauthorized to edit the slots that dont belong to you",
                 });
             }
-            const findSlot = await db.eventSlot.findUnique({
+            const findSlot = await database.eventSlot.findUnique({
                 where: {
                     id: slotId,
                 },
@@ -782,7 +729,7 @@ eventRouter.patch(
                 });
             }
 
-            await db.eventSlot.update({
+            await database.eventSlot.update({
                 data: {
                     capacity: updatedData.capacity,
                     end_time: endDateTime,
@@ -796,6 +743,9 @@ eventRouter.patch(
                     id: slotId,
                 },
             });
+
+            await syncEventToCache(findEvent.id);
+
             return res.status(200).json({
                 message: "Event Slot was successfully edited",
             });
@@ -819,7 +769,7 @@ eventRouter.delete(
             const user = req.organiserId;
             const { eventId, slotId } = req.params;
 
-            const slot = await db.eventSlot.findFirst({
+            const slot = await database.eventSlot.findFirst({
                 include: {
                     event: true,
                 },
@@ -848,7 +798,7 @@ eventRouter.delete(
                 });
             }
 
-            await db.$transaction(async (tx) => {
+            await database.$transaction(async (tx) => {
                 const organiserWallet = await tx.wallet.findUnique({
                     where: {
                         userId: user,
@@ -969,7 +919,7 @@ eventRouter.delete(
                 });
             });
 
-            await deleteCache();
+            await syncEventToCache(slot.eventId);
 
             return res.status(200).json({
                 message: "Slot deleted successfully",
