@@ -118,20 +118,45 @@ const syncEventCache = async () => {
             }[]
         >`SELECT last_synced_at FROM cache_metadata WHERE id = 'event_cache'`;
 
-        const lastSync = meta[0]?.last_synced_at ?? new Date(0);
+        if (!meta.length) {
+            await database.$executeRaw`
+        INSERT INTO cache_metadata (id, last_synced_at)
+        VALUES ('event_cache', '1970-01-01')
+      `;
+        }
+
+        const refreshedMeta = await database.$queryRaw<
+            {
+                last_synced_at: Date | null;
+            }[]
+        >`SELECT last_synced_at FROM cache_metadata WHERE id = 'event_cache'`;
+
+        const lastSync = refreshedMeta[0]?.last_synced_at ?? new Date(0);
+
+        const cacheCount = await database.$queryRaw<
+            {
+                count: bigint;
+            }[]
+        >`SELECT COUNT(*)::bigint as count FROM event_cache`;
+
+        const isEmpty = cacheCount[0].count === 0n;
 
         const updatedEvents = await database.event.findMany({
             include: {
                 slots: true,
             },
-            where: {
-                updated_at: {
-                    gt: lastSync,
-                },
-            },
+            where: isEmpty
+                ? {}
+                : {
+                      updated_at: {
+                          gt: lastSync,
+                      },
+                  },
         });
 
-        if (!updatedEvents.length) return;
+        if (!updatedEvents.length && !isEmpty) {
+            return;
+        }
 
         for (let i = 0; i < updatedEvents.length; i += EVENT_BATCH_SIZE) {
             const batch = updatedEvents.slice(i, i + EVENT_BATCH_SIZE);

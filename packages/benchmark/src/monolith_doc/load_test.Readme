@@ -1,0 +1,287 @@
+FIRST 1:-
+
+THRESHOLDS 
+
+    event_list_latency
+    ✓ 'p(50)<200' p(50)=80.97ms
+    ✓ 'p(95)<800' p(95)=473.94ms
+    ✓ 'p(99)<1000' p(99)=614.76ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.08%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 262660 987.427005/s
+    checks_succeeded...: 49.96% 131234 out of 262660
+    checks_failed......: 50.03% 131426 out of 262660
+
+    ✗ 200 OK
+      ↳  99% — ✓ 131224 / ✗ 106
+    ✗ events present
+      ↳  0% — ✓ 10 / ✗ 131320
+
+    CUSTOM
+    event_list_latency.............: avg=327.71ms min=412.05µs med=80.97ms max=52.86s p(90)=398.59ms p(95)=473.94ms
+
+    HTTP
+    http_req_duration..............: avg=327.45ms min=0s       med=80.71ms max=52.86s p(90)=398.53ms p(95)=473.89ms
+      { expected_response:true }...: avg=327.71ms min=412.05µs med=80.97ms max=52.86s p(90)=398.59ms p(95)=473.94ms
+    http_req_failed................: 0.08%  106 out of 131330
+    http_reqs......................: 131330 493.713502/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.37s    min=1s       med=1.08s   max=56.91s p(90)=1.4s     p(95)=1.48s   
+    iterations.....................: 131330 493.713502/s
+    vus............................: 1      min=0             max=2497
+    vus_max........................: 2500   min=2374          max=2500
+
+    NETWORK
+    data_received..................: 704 MB 2.6 MB/s
+    data_sent......................: 11 MB  41 kB/s
+
+running (4m26.0s), 0000/2500 VUs, 131330 complete and 0 interrupted iterations
+load ✓ [======================================] 0000/2500 VUs  4m0s
+
+SECOND 2:-
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_load.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2500 max VUs, 4m30s max duration (incl. graceful stop):
+              * load: Up to 2500 looping VUs for 4m0s over 8 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✓ 'p(50)<200' p(50)=74.01ms
+    ✓ 'p(95)<800' p(95)=478.26ms
+    ✓ 'p(99)<1000' p(99)=712.6ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 281306 1041.834078/s
+    checks_succeeded...: 50.00% 140663 out of 281306
+    checks_failed......: 49.99% 140643 out of 281306
+
+    ✓ 200 OK
+    ✗ events present
+      ↳  0% — ✓ 10 / ✗ 140643
+
+    CUSTOM
+    event_list_latency.............: avg=261.11ms min=410.15µs med=74.01ms max=39.29s p(90)=352.98ms p(95)=478.26ms
+
+    HTTP
+    http_req_duration..............: avg=261.11ms min=410.15µs med=74.01ms max=39.29s p(90)=352.98ms p(95)=478.26ms
+      { expected_response:true }...: avg=261.11ms min=410.15µs med=74.01ms max=39.29s p(90)=352.98ms p(95)=478.26ms
+    http_req_failed................: 0.00%  0 out of 140653
+    http_reqs......................: 140653 520.917039/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.27s    min=1s       med=1.07s   max=45.16s p(90)=1.35s    p(95)=1.48s   
+    iterations.....................: 140653 520.917039/s
+    vus............................: 25     min=10          max=2487
+    vus_max........................: 2500   min=2500        max=2500
+
+    NETWORK
+    data_received..................: 754 MB 2.8 MB/s
+    data_sent......................: 12 MB  43 kB/s
+
+running (4m30.0s), 0000/2500 VUs, 140653 complete and 25 interrupted iterations
+load ✓ [======================================] 0012/2500 VUs  4m0s
+
+THIRD 3:-
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_load.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2500 max VUs, 4m30s max duration (incl. graceful stop):
+              * load: Up to 2500 looping VUs for 4m0s over 8 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✓ 'p(50)<200' p(50)=47.94ms
+    ✓ 'p(95)<800' p(95)=364.05ms
+    ✓ 'p(99)<1000' p(99)=430.72ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 293356 1176.439829/s
+    checks_succeeded...: 50.00% 146678 out of 293356
+    checks_failed......: 50.00% 146678 out of 293356
+
+    ✓ 200 OK
+    ✗ events present
+      ↳  0% — ✓ 0 / ✗ 146678
+
+    CUSTOM
+    event_list_latency.............: avg=214.73ms min=390.46µs med=47.94ms max=35.05s p(90)=313.91ms p(95)=364.05ms
+
+    HTTP
+    http_req_duration..............: avg=214.73ms min=390.46µs med=47.94ms max=35.05s p(90)=313.91ms p(95)=364.05ms
+      { expected_response:true }...: avg=214.73ms min=390.46µs med=47.94ms max=35.05s p(90)=313.91ms p(95)=364.05ms
+    http_req_failed................: 0.00%  0 out of 146678
+    http_reqs......................: 146678 588.219915/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.22s    min=1s       med=1.04s   max=36.05s p(90)=1.31s    p(95)=1.36s   
+    iterations.....................: 146678 588.219915/s
+    vus............................: 1      min=0           max=2495
+    vus_max........................: 2500   min=2157        max=2500
+
+    NETWORK
+    data_received..................: 786 MB 3.2 MB/s
+    data_sent......................: 12 MB  49 kB/s
+
+running (4m09.4s), 0000/2500 VUs, 146678 complete and 0 interrupted iterations
+load ✓ [======================================] 0000/2500 VUs  4m0s
+
+FOURTH 4:-
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_load.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2500 max VUs, 4m30s max duration (incl. graceful stop):
+              * load: Up to 2500 looping VUs for 4m0s over 8 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✓ 'p(50)<200' p(50)=109.44ms
+    ✓ 'p(95)<800' p(95)=374.76ms
+    ✓ 'p(99)<1000' p(99)=529.16ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 282856 1108.645626/s
+    checks_succeeded...: 50.01% 141461 out of 282856
+    checks_failed......: 49.98% 141395 out of 282856
+
+    ✓ 200 OK
+    ✗ events present
+      ↳  0% — ✓ 33 / ✗ 141395
+
+    CUSTOM
+    event_list_latency.............: avg=255.01ms min=408.82µs med=109.44ms max=37.68s p(90)=312.24ms p(95)=374.76ms
+
+    HTTP
+    http_req_duration..............: avg=255.01ms min=408.82µs med=109.44ms max=37.68s p(90)=312.24ms p(95)=374.76ms
+      { expected_response:true }...: avg=255.01ms min=408.82µs med=109.44ms max=37.68s p(90)=312.24ms p(95)=374.76ms
+    http_req_failed................: 0.00%  0 out of 141428
+    http_reqs......................: 141428 554.322813/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.27s    min=1s       med=1.11s    max=38.68s p(90)=1.31s    p(95)=1.38s   
+    iterations.....................: 141428 554.322813/s
+    vus............................: 1      min=1           max=2487
+    vus_max........................: 2500   min=2500        max=2500
+
+    NETWORK
+    data_received..................: 758 MB 3.0 MB/s
+    data_sent......................: 12 MB  46 kB/s
+
+running (4m15.1s), 0000/2500 VUs, 141428 complete and 0 interrupted iterations
+load ✓ [======================================] 0000/2500 VUs  4m0s
+
+FIFTH 5:-
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_load.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2500 max VUs, 4m30s max duration (incl. graceful stop):
+              * load: Up to 2500 looping VUs for 4m0s over 8 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✓ 'p(50)<200' p(50)=56.65ms
+    ✓ 'p(95)<800' p(95)=386.48ms
+    ✓ 'p(99)<1000' p(99)=728.32ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 285292 1056.606979/s
+    checks_succeeded...: 50.00% 142661 out of 285292
+    checks_failed......: 49.99% 142631 out of 285292
+
+    ✓ 200 OK
+    ✗ events present
+      ↳  0% — ✓ 15 / ✗ 142631
+
+    CUSTOM
+    event_list_latency.............: avg=249.02ms min=405.98µs med=56.65ms max=39.55s p(90)=292.79ms p(95)=386.48ms
+
+    HTTP
+    http_req_duration..............: avg=249.02ms min=405.98µs med=56.65ms max=39.55s p(90)=292.79ms p(95)=386.48ms
+      { expected_response:true }...: avg=249.02ms min=405.98µs med=56.65ms max=39.55s p(90)=292.79ms p(95)=386.48ms
+    http_req_failed................: 0.00%  0 out of 142646
+    http_reqs......................: 142646 528.303489/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.26s    min=1s       med=1.05s   max=44.65s p(90)=1.29s    p(95)=1.39s   
+    iterations.....................: 142632 528.251639/s
+    vus............................: 34     min=10          max=2487
+    vus_max........................: 2500   min=2500        max=2500
+
+    NETWORK
+    data_received..................: 765 MB 2.8 MB/s
+    data_sent......................: 12 MB  44 kB/s
+
+running (4m30.0s), 0000/2500 VUs, 142632 complete and 34 interrupted iterations
+load ✓ [======================================] 0033/2500 VUs  4m0s

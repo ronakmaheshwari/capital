@@ -60,7 +60,16 @@ export default function () {
 
     check(res, {
         "200 OK": (r) => r.status === 200,
-        "events present": (r) => Array.isArray(r.json("events")),
+        "events present": (r) => {
+            const body = r.json();
+            return (
+                typeof body === "object" &&
+                body !== null &&
+                "data" in body &&
+                Array.isArray((body as any).data.events) &&
+                (body as any).data.events.length > 0
+            );
+        },
     });
 
     eventLatency.add(res.timings.duration);
