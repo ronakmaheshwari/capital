@@ -3,7 +3,7 @@
 URL="http://localhost:3001/api/v1/events/"
 CONNECTIONS=30
 DURATION=60
-AMOUNT=100
+AMOUNT=3000
 
 for i in {1..5}
 do

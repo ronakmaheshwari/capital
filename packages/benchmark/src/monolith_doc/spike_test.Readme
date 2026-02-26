@@ -1,0 +1,240 @@
+First 1:-
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✓ 'p(50)<400' p(50)=331.51ms
+    ✗ 'p(95)<800' p(95)=1.45s
+    ✗ 'p(99)<1000' p(99)=52.81s
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=1.33%
+
+    success_rate
+    ✗ 'rate>0.99' rate=98.66%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 69669  995.17758/s
+    checks_succeeded...: 98.66% 68736 out of 69669
+    checks_failed......: 1.33%  933 out of 69669
+
+    ✗ 200 OK
+      ↳  98% — ✓ 68736 / ✗ 933
+
+    CUSTOM
+    event_list_latency.............: avg=1.28s    min=769.64µs med=331.51ms max=58.99s p(90)=1.18s p(95)=1.45s
+    success_rate...................: 98.66% 68736 out of 69669
+
+    HTTP
+    http_req_duration..............: avg=1.28s    min=769.64µs med=331.51ms max=58.99s p(90)=1.18s p(95)=1.45s
+      { expected_response:true }...: avg=625.85ms min=769.64µs med=327.97ms max=52.63s p(90)=1.12s p(95)=1.38s
+    http_req_failed................: 1.33%  933 out of 69669
+    http_reqs......................: 69669  995.17758/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.38s    min=1s       med=1.33s    max=1m1s   p(90)=2.19s p(95)=2.53s
+    iterations.....................: 69669  995.17758/s
+    vus............................: 87     min=0              max=2800
+    vus_max........................: 2800   min=2513           max=2800
+
+    NETWORK
+    data_received..................: 369 MB 5.3 MB/s
+    data_sent......................: 5.8 MB 83 kB/s
+
+running (1m10.0s), 0000/2800 VUs, 69669 complete and 87 interrupted iterations
+spike ✓ [======================================] 2800 VUs  1m0s
+ERRO[0071] thresholds on metrics 'http_req_duration, http_req_failed, success_rate' have been crossed 
+
+SECOND 2:-
+THRESHOLDS 
+
+    http_req_duration
+    ✓ 'p(50)<400' p(50)=247.96ms
+    ✗ 'p(95)<800' p(95)=805.79ms
+    ✗ 'p(99)<1000' p(99)=20.99s
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=1.37%
+
+    success_rate
+    ✗ 'rate>0.99' rate=98.62%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 82632  1180.381142/s
+    checks_succeeded...: 98.62% 81493 out of 82632
+    checks_failed......: 1.37%  1139 out of 82632
+
+    ✗ 200 OK
+      ↳  98% — ✓ 81493 / ✗ 1139
+
+    CUSTOM
+    event_list_latency.............: avg=861.93ms min=0s       med=247.96ms max=58.99s p(90)=600.79ms p(95)=805.79ms
+    success_rate...................: 98.62% 81493 out of 82632
+
+    HTTP
+    http_req_duration..............: avg=861.93ms min=0s       med=247.96ms max=58.99s p(90)=600.79ms p(95)=805.79ms
+      { expected_response:true }...: avg=533.2ms  min=985.95µs med=245.9ms  max=58.97s p(90)=590.07ms p(95)=734.54ms
+    http_req_failed................: 1.37%  1139 out of 82632
+    http_reqs......................: 82632  1180.381142/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.01s    min=1s       med=1.25s    max=1m1s   p(90)=1.63s    p(95)=1.86s   
+    iterations.....................: 82608  1180.038307/s
+    vus............................: 156    min=156            max=2800
+    vus_max........................: 2800   min=2800           max=2800
+
+    NETWORK
+    data_received..................: 437 MB 6.2 MB/s
+    data_sent......................: 6.9 MB 98 kB/s
+
+running (1m10.0s), 0000/2800 VUs, 82608 complete and 156 interrupted iterations
+spike ✓ [======================================] 2800 VUs  1m0s
+ERRO[0071] thresholds on metrics 'http_req_duration, http_req_failed, success_rate' have been crossed 
+
+THIRD 3:-
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✗ 'p(50)<400' p(50)=433.6ms
+    ✗ 'p(95)<800' p(95)=1.47s
+    ✗ 'p(99)<1000' p(99)=35.51s
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=1.77%
+
+    success_rate
+    ✗ 'rate>0.99' rate=98.22%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 63797  911.366525/s
+    checks_succeeded...: 98.22% 62667 out of 63797
+    checks_failed......: 1.77%  1130 out of 63797
+
+    ✗ 200 OK
+      ↳  98% — ✓ 62667 / ✗ 1130
+
+    CUSTOM
+    event_list_latency.............: avg=1.21s min=0s       med=433.6ms  max=58.33s p(90)=1.04s    p(95)=1.47s
+    success_rate...................: 98.22% 62667 out of 63797
+
+    HTTP
+    http_req_duration..............: avg=1.21s min=0s       med=433.6ms  max=58.33s p(90)=1.04s    p(95)=1.47s
+      { expected_response:true }...: avg=1s    min=605.32µs med=433.98ms max=58.33s p(90)=996.69ms p(95)=1.3s 
+    http_req_failed................: 1.77%  1130 out of 63797
+    http_reqs......................: 63797  911.366525/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.63s min=1s       med=1.43s    max=1m1s   p(90)=2.11s    p(95)=2.79s
+    iterations.....................: 63797  911.366525/s
+    vus............................: 32     min=0              max=2800
+    vus_max........................: 2800   min=2379           max=2800
+
+    NETWORK
+    data_received..................: 336 MB 4.8 MB/s
+    data_sent......................: 5.2 MB 75 kB/s
+
+running (1m10.0s), 0000/2800 VUs, 63797 complete and 32 interrupted iterations
+spike ✓ [======================================] 2800 VUs  1m0s
+ERRO[0071] thresholds on metrics 'http_req_duration, http_req_failed, success_rate' have been crossed 
+
+FOURTH 4:-
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✓ 'p(50)<400' p(50)=274.61ms
+    ✗ 'p(95)<800' p(95)=933.9ms
+    ✗ 'p(99)<1000' p(99)=58.94s
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=1.69%
+
+    success_rate
+    ✗ 'rate>0.99' rate=98.30%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 68895  1115.028093/s
+    checks_succeeded...: 98.30% 67729 out of 68895
+    checks_failed......: 1.69%  1166 out of 68895
+
+    ✗ 200 OK
+      ↳  98% — ✓ 67729 / ✗ 1166
+
+    CUSTOM
+    event_list_latency.............: avg=1.42s    min=832.91µs med=274.61ms max=59s    p(90)=545.27ms p(95)=933.9ms 
+    success_rate...................: 98.30% 67729 out of 68895
+
+    HTTP
+    http_req_duration..............: avg=1.42s    min=832.91µs med=274.61ms max=59s    p(90)=545.27ms p(95)=933.9ms 
+      { expected_response:true }...: avg=477.62ms min=832.91µs med=272.35ms max=58.98s p(90)=511.9ms  p(95)=605.06ms
+    http_req_failed................: 1.69%  1166 out of 68895
+    http_reqs......................: 68895  1115.028093/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.46s    min=1s       med=1.27s    max=1m1s   p(90)=1.55s    p(95)=2.05s   
+    iterations.....................: 68895  1115.028093/s
+    vus............................: 1454   min=0              max=2800
+    vus_max........................: 2800   min=2784           max=2800
+
+    NETWORK
+    data_received..................: 363 MB 5.9 MB/s
+    data_sent......................: 5.7 MB 93 kB/s
+
+running (1m01.8s), 0000/2800 VUs, 68895 complete and 0 interrupted iterations
+spike ✓ [======================================] 2800 VUs  1m0s
+ERRO[0063] thresholds on metrics 'http_req_duration, http_req_failed, success_rate' have been crossed 
+
+Fifth 5:-
+
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✓ 'p(50)<400' p(50)=392.4ms
+    ✗ 'p(95)<800' p(95)=1.52s
+    ✗ 'p(99)<1000' p(99)=58.93s
+
+    http_req_failed
+    ✗ 'rate<0.01' rate=2.18%
+
+    success_rate
+    ✗ 'rate>0.99' rate=97.81%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 53134  759.033496/s
+    checks_succeeded...: 97.81% 51973 out of 53134
+    checks_failed......: 2.18%  1161 out of 53134
+
+    ✗ 200 OK
+      ↳  97% — ✓ 51973 / ✗ 1161
+
+    CUSTOM
+    event_list_latency.............: avg=2.03s min=0s       med=392.4ms  max=58.99s p(90)=1.18s p(95)=1.52s
+    success_rate...................: 97.81% 51973 out of 53134
+
+    HTTP
+    http_req_duration..............: avg=2.03s min=0s       med=392.4ms  max=58.99s p(90)=1.18s p(95)=1.52s
+      { expected_response:true }...: avg=1.16s min=703.75µs med=380.62ms max=58.38s p(90)=1.1s  p(95)=1.42s
+    http_req_failed................: 2.18%  1161 out of 53134
+    http_reqs......................: 53134  759.033496/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.16s min=1s       med=1.39s    max=1m1s   p(90)=2.21s p(95)=2.55s
+    iterations.....................: 53123  758.876358/s
+    vus............................: 30     min=30             max=2800
+    vus_max........................: 2800   min=2800           max=2800
+
+    NETWORK
+    data_received..................: 279 MB 4.0 MB/s
+    data_sent......................: 4.4 MB 63 kB/s
+
+running (1m10.0s), 0000/2800 VUs, 53123 complete and 30 interrupted iterations
+spike ✓ [======================================] 2800 VUs  1m0s
+ERRO[0071] thresholds on metrics 'http_req_duration, http_req_failed, success_rate' have been crossed 

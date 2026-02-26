@@ -1,0 +1,15 @@
+Loaded 5 runs
+
+===== LATENCY =====
+p50 latency            min: 1.00 ms         mean: 19.00 ms       max: 39.00 ms
+p90 latency            min: 5.00 ms         mean: 30.60 ms       max: 66.00 ms
+p95 latency            min: NaN ms          mean: NaN ms         max: NaN ms
+p97.5 latency          min: 37.00 ms        mean: 248.80 ms      max: 977.00 ms
+p99 latency            min: 40.00 ms        mean: 307.60 ms      max: 1252.00 ms
+Average latency        min: 18.31 ms        mean: 31.55 ms       max: 53.13 ms
+Minimum latency        min: 1.00 ms         mean: 1.20 ms        max: 2.00 ms
+Maximum latency        min: 46.00 ms        mean: 354.20 ms      max: 1438.00 ms
+
+===== THROUGHPUT =====
+Requests/sec           min: 250.00          mean: 450.00         max: 500.00
+Throughput (MB/s)      min: 1.28            mean: 2.30           max: 2.56
