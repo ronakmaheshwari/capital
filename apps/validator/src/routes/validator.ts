@@ -25,6 +25,7 @@ import multer from "multer";
 import validatorMiddleware, { unVerifiedValidatorMiddleware } from "../middleware";
 import fs from "fs/promises";
 import path from "path";
+import { appendProfile } from "../utils/validationProfiler";
 
 const validatorRouter: Router = express.Router();
 
@@ -1191,6 +1192,8 @@ validatorRouter.get("/download", validatorMiddleware, async (req: Request, res: 
  */
 validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res: Response) => {
     try {
+        const endpointStart = performance.now();
+
         const _verifierId = req.userId;
 
         const { nonce, ciphertext } = req.body;
@@ -1200,35 +1203,44 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
                 message: "Missing nonce or ciphertext",
             });
         }
-
+        
+        const t0 = performance.now();
         const decryptedTicket = await decryptPayload(ciphertext, nonce);
-        console.log("Decrypted ticket payload:", decryptedTicket);
+        const decrypt = performance.now()-t0;
 
         const ticketId = decryptedTicket.ticketId;
-        console.log("ticketId =", ticketId);
 
+        const t2 = performance.now();
         const checkId = await db.ticket.findUnique({
             where: {
                 id: ticketId,
             },
         });
+        const ticketLookup = performance.now()-t2;
+
 
         if (!checkId) {
             return res.status(400).json({
                 message: "Invalid Ticket was provided",
             });
         }
+
+        const t3 = performance.now();
         const publicKeyObj = await db.user.findUnique({
             where: {
                 id: checkId.userId,
             },
         });
+        const userLookup = performance.now()-t3;
+
+
         if (!publicKeyObj || !publicKeyObj.public_key) {
             return res.status(400).json({
                 message: "User public key not found",
             });
         }
 
+        const t1 = performance.now();
         const validateTicket = await verifySignedTicket(
             {
                 ciphertext,
@@ -1236,14 +1248,17 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
             },
             publicKeyObj.public_key,
         );
+        const verify = performance.now()-t1;
 
         if (!validateTicket.valid) {
             return res.status(400).json({
                 message: "Invalid ticket was submitted",
             });
         }
+
         const otp = "1234";
         //const otp = NumericOTP(4).toString();
+        const t4 = performance.now();
         await db.otp.updateMany({
             where: {
                 ticketId: checkId.id,
@@ -1271,6 +1286,19 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
         //     }),
         // );
         // await sendEmailOtp(publicKeyObj.email, otpRecord.otp_code);
+        const otpInsert = performance.now()-t4;
+
+        const endpoint = performance.now()-endpointStart;
+
+        appendProfile({
+            total: endpoint,
+            decrypt,
+            verify,
+            ticketLookup,
+            userLookup,
+            otpInsert,
+        });
+
         return res.status(200).json({
             message: "OTP for person validation",
             ticketId: checkId.id,
@@ -1560,7 +1588,7 @@ validatorRouter.get(
                 where: {
                     eventSlotId: slotId,
                     is_valid: true,
-                    is_verified: false,
+                    is_verified: true,
                 },
             });
 
