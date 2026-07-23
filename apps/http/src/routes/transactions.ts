@@ -162,7 +162,7 @@ transactionRouter.get("/:txnId", userMiddleware, async (req: Request, res: Respo
                 walletId: true,
             },
             where: {
-                id: txnId,
+                id: txnId as string,
             },
         });
 

@@ -20,6 +20,7 @@ coverage
 
 # Vercel
 .vercel
+tsconfig.tsbuildinfo
 
 # Build Outputs
 .next/

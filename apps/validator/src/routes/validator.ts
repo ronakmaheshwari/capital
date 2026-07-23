@@ -1494,7 +1494,9 @@ validatorRouter.get(
     validatorMiddleware,
     async (req: Request, res: Response) => {
         try {
-            const { slotId } = req.params;
+            const slotId = Array.isArray(req.params.slotId)
+                ? req.params.slotId[0]
+                : (req.params.slotId as string);
             const cacheKey = `pendingTickets:${slotId}`;
 
             const cached = await redisCache.get(cacheKey);
@@ -1556,7 +1558,9 @@ validatorRouter.get(
     validatorMiddleware,
     async (req: Request, res: Response) => {
         try {
-            const { slotId } = req.params;
+            const slotId = Array.isArray(req.params.slotId)
+                ? req.params.slotId[0]
+                : (req.params.slotId as string);
             const cacheKey = `validatedTickets:${slotId}`;
 
             const cached = await redisCache.get(cacheKey);
@@ -1661,7 +1665,7 @@ validatorRouter.get("/tickets/:ticketId", validatorMiddleware, async (req, res) 
                 },
             },
             where: {
-                id: ticketId,
+                id: ticketId as string,
             },
         });
 
@@ -1725,7 +1729,7 @@ validatorRouter.get("/slots/:slotId", validatorMiddleware, async (req, res) => {
                 },
             },
             where: {
-                eventSlotId: slotId,
+                eventSlotId: slotId as string,
                 is_verified: false,
             },
         });
