@@ -1,0 +1,259 @@
+Build an Automated Benchmark Data
+Generator for the Capital Ticketing System
+You are a senior TypeScript backend engineer. Your task is to implement a production-ready benchmark
+data generator for my existing Capital event ticketing system.
+Objective
+Implement a fully automated benchmark pipeline that generates reproducible benchmark datasets for my
+IEEE Access performance evaluation.
+The script must automatically:
+Create 1,000 benchmark users (configurable)
+Generate Ed25519 keypairs for every user
+Encrypt and store private keys exactly as the production application does
+Create wallets
+Create payment cards with configurable balances
+Create one organiser account
+Create one event
+Create one event slot
+Purchase one ticket for every benchmark user
+Obtain the signed ticket payload
+Encrypt the payload using the existing XSalsa20-Poly1305 implementation
+Call the /validator/validate endpoint
+Save all required benchmark data into validation-data.json
+The resulting JSON file will later be consumed directly by k6.
+IMPORTANT
+Do NOT reimplement cryptography.
+Reuse every existing helper already present inside the project.
+Reuse:
+createSignedTicket
+verifySignedTicket
+encryptPayload
+decryptPayload
+generateKeyPair
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+12.
+13.
+•
+•
+•
+•
+•
+1
+canonicalStringify
+decrypt
+encrypt
+JWT helpers
+OTP helpers
+Purchase service
+Validation service
+Never duplicate production logic.
+Requirements
+Generate exactly one benchmark ticket per user.
+Each benchmark record must contain
+{
+"token": "...",
+"ciphertext": "...",
+"nonce": "...",
+"ticketId": "..."
+}
+The script should produce
+validation-data.json
+containing
+[
+{
+"token":"...",
+"ciphertext":"...",
+"nonce":"...",
+"ticketId":"..."
+}
+]
+for every generated ticket.
+•
+•
+•
+•
+•
+•
+•
+2
+Configuration
+Create
+benchmark.config.ts
+containing
+export default {
+users:1000,
+organiserEmail:"organiser@test.com",
+eventTitle:"Benchmark Event",
+slotCapacity:100000,
+cardBalance:100000,
+concurrency:25,
+output:"validation-data.json"
+}
+The script must use this configuration.
+Architecture
+Split the implementation into reusable services.
+benchmark/
+ config.ts
+ createUsers.ts
+ createCards.ts
+ createWallets.ts
+ createOrganiser.ts
+ createEvent.ts
+ purchaseTickets.ts
+ encryptTickets.ts
+ generateValidationData.ts
+ index.ts
+Do not write everything inside one file.
+3
+User Creation
+For every benchmark user
+Generate
+benchmark00001@test.com
+benchmark00002@test.com
+...
+Generate
+first name
+last name
+password
+Ed25519 keypair
+Encrypt the private key using the application's existing encryption utility.
+Store the encrypted private key exactly like production.
+Wallets
+Automatically create wallets for every user if they do not already exist.
+Cards
+Automatically create cards.
+Each card should contain a configurable balance.
+Card numbers must be unique.
+Organiser
+Create one organiser.
+Reuse existing organiser models.
+•
+•
+•
+•
+4
+Event
+Create
+Benchmark Event
+Capacity
+100000
+One slot only.
+Ticket Purchase
+Purchase exactly one ticket per benchmark user.
+Do NOT manually insert Ticket rows.
+Call the existing purchase service or endpoint so production logic executes normally.
+QR Generation
+Reuse the application's production implementation.
+Do not duplicate signing logic.
+Validation Payload
+Reuse
+encryptPayload()
+Generate
+ciphertext
+nonce
+5
+for every purchased ticket.
+JWT
+Generate a valid JWT for every benchmark user using the application's existing login/authentication flow.
+Store
+token
+inside the JSON.
+validation-data.json
+Output format
+[
+{
+"token":"...",
+"ciphertext":"...",
+"nonce":"...",
+"ticketId":"..."
+}
+]
+Exactly matching the k6 benchmark.
+Concurrency
+Use
+Promise.allSettled()
+with configurable batch sizes.
+Never execute 1000 database writes simultaneously.
+Default concurrency
+6
+25
+Progress
+Display
+Users created:
+Cards created:
+Wallets created:
+Tickets purchased:
+Validation payloads generated:
+JSON written:
+Elapsed time:
+Fault Tolerance
+If one user fails
+Continue processing remaining users.
+Produce
+failed-users.json
+containing
+email
+reason
+Idempotency
+Running the script twice should not create duplicates.
+Reuse existing users if they already exist.
+Reuse existing cards.
+7
+Reuse organiser.
+Reuse event.
+Reuse slot.
+Only generate missing tickets.
+Performance
+The implementation should comfortably generate
+1,000 users
+5,000 users
+10,000 users
+without modification.
+Output
+After completion
+validation-data.json
+must contain all benchmark records.
+The following k6 script should work without modification.
+const validationData = new SharedArray("validation-data", () =>
+JSON.parse(open("./validation-data.json"))
+);
+const data = validationData[__ITER % validationData.length];
+http.post(
+`${BASE}/api/v1/validator/validate`,
+JSON.stringify({
+ciphertext:data.ciphertext,
+nonce:data.nonce
+}),
+{
+headers:{
+•
+•
+•
+8
+Authorization:`Bearer ${data.token}`,
+"Content-Type":"application/json"
+}
+}
+);
+Code Quality Requirements
+TypeScript only
+Strict typing
+No any
+Reuse existing Prisma models
+Reuse existing cryptographic utilities
+No duplicated business logic
+No duplicated authentication logic
+Compile without modification
+Production-ready
+Well-commented
+Modular
+Suitable for inclusion in an IEEE Access reproducibility package.
