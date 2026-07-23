@@ -4,7 +4,7 @@ import { app, port } from "./app";
 
 const totalCpus = os.cpus().length;
 
-if (cluster.isPrimary) {
+if ((cluster as any).isPrimary) {
     for (let i = 0; i < totalCpus; i++) {
         cluster.fork();
     }

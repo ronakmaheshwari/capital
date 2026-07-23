@@ -297,7 +297,7 @@ eventRouter.get("/:id", organiserMiddleware, async (req: Request, res: Response)
                 title: true,
             },
             where: {
-                id,
+                id: id as string,
             },
         });
 
@@ -315,7 +315,7 @@ eventRouter.get("/:id", organiserMiddleware, async (req: Request, res: Response)
 
         const totalSlots = await db.eventSlot.count({
             where: {
-                eventId: id,
+                eventId: id as string,
             },
         });
 
@@ -360,7 +360,7 @@ eventRouter.patch("/:id", organiserMiddleware, async (req: Request, res: Respons
 
         const getEvent = await db.event.findUnique({
             where: {
-                id: id,
+                id: id as string,
             },
         });
 
@@ -379,7 +379,7 @@ eventRouter.patch("/:id", organiserMiddleware, async (req: Request, res: Respons
         await db.event.update({
             data: updateBody,
             where: {
-                id,
+                id: id as string,
             },
         });
 
@@ -411,7 +411,7 @@ eventRouter.delete("/:id", organiserMiddleware, async (req: Request, res: Respon
                 },
             },
             where: {
-                id,
+                id: id as string,
             },
         });
 
@@ -440,12 +440,12 @@ eventRouter.delete("/:id", organiserMiddleware, async (req: Request, res: Respon
         await db.$transaction([
             db.eventSlot.deleteMany({
                 where: {
-                    eventId: id,
+                    eventId: id as string,
                 },
             }),
             db.event.delete({
                 where: {
-                    id,
+                    id: id as string,
                 },
             }),
         ]);
@@ -485,7 +485,7 @@ eventRouter.post("/:eventId/slots", organiserMiddleware, async (req: Request, re
 
         const event = await db.event.findUnique({
             where: {
-                id: eventId,
+                id: eventId as string,
             },
         });
 
@@ -556,7 +556,7 @@ eventRouter.get("/:eventId/slots", async (req: Request, res: Response) => {
                 title: true,
             },
             where: {
-                id: eventId,
+                id: eventId as string,
             },
         });
 
@@ -575,12 +575,12 @@ eventRouter.get("/:eventId/slots", async (req: Request, res: Response) => {
                     location_name: true,
                 },
                 where: {
-                    eventId,
+                    eventId: eventId as string,
                 },
             }),
             db.eventSlot.count({
                 where: {
-                    eventId,
+                    eventId: eventId as string,
                 },
             }),
         ]);
@@ -692,10 +692,10 @@ eventRouter.get("/:eventId/:slotId", userMiddleware, async (req: Request, res: R
         }
         const eventFinder = await db.event.findUnique({
             where: {
-                id: eventId,
+                id: eventId as string,
                 slots: {
                     some: {
-                        id: slotId,
+                        id: slotId as string,
                     },
                 },
             },
@@ -712,7 +712,7 @@ eventRouter.get("/:eventId/:slotId", userMiddleware, async (req: Request, res: R
                 event: true,
             },
             where: {
-                id: slotId,
+                id: slotId as string,
             },
         });
 
@@ -755,7 +755,7 @@ eventRouter.patch(
 
             const findEvent = await db.event.findUnique({
                 where: {
-                    id: eventId,
+                    id: eventId as string,
                 },
             });
 
@@ -772,7 +772,7 @@ eventRouter.patch(
             }
             const findSlot = await db.eventSlot.findUnique({
                 where: {
-                    id: slotId,
+                    id: slotId as string,
                 },
             });
 
@@ -793,7 +793,7 @@ eventRouter.patch(
                     start_time: startDateTime,
                 },
                 where: {
-                    id: slotId,
+                    id: slotId as string,
                 },
             });
             return res.status(200).json({
@@ -824,8 +824,8 @@ eventRouter.delete(
                     event: true,
                 },
                 where: {
-                    eventId,
-                    id: slotId,
+                    eventId: eventId as string,
+                    id: slotId as string,
                 },
             });
 
@@ -870,7 +870,7 @@ eventRouter.delete(
                     where: {
                         canceled_at: null,
                         ticket: {
-                            eventSlotId: slotId,
+                            eventSlotId: slotId as string, 
                             status: "ISSUED",
                         },
                         type: "PURCHASE",
@@ -880,7 +880,7 @@ eventRouter.delete(
                 if (paymentTransactions.length === 0) {
                     await tx.eventSlot.delete({
                         where: {
-                            id: slotId,
+                            id: slotId as string,
                         },
                     });
                     return;
@@ -912,7 +912,7 @@ eventRouter.delete(
                         status: "CANCELLED",
                     },
                     where: {
-                        eventSlotId: slotId,
+                        eventSlotId: slotId as string,
                         status: "ISSUED",
                     },
                 });
@@ -964,7 +964,7 @@ eventRouter.delete(
 
                 await tx.eventSlot.delete({
                     where: {
-                        id: slotId,
+                        id: slotId as string,
                     },
                 });
             });

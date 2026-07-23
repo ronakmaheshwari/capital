@@ -1371,7 +1371,7 @@ organiserRouter.get("/:eventId/slots", organiserMiddleware, async (req: Request,
                 title: true,
             },
             where: {
-                id: eventId,
+                id: eventId as string,
             },
         });
 
@@ -1464,7 +1464,7 @@ organiserRouter.get("/:eventId/slots", organiserMiddleware, async (req: Request,
         const [totalSlots, totalCapacity, totalBooked, filteredCount, slots] = await Promise.all([
             db.eventSlot.count({
                 where: {
-                    eventId,
+                    eventId: eventId as string,
                 },
             }),
 
@@ -1473,14 +1473,14 @@ organiserRouter.get("/:eventId/slots", organiserMiddleware, async (req: Request,
                     capacity: true,
                 },
                 where: {
-                    eventId,
+                    eventId: eventId as string,
                 },
             }),
 
             db.ticket.count({
                 where: {
                     eventSlot: {
-                        eventId,
+                        eventId: eventId as string,
                     },
                     is_valid: true,
                 },
@@ -1548,7 +1548,7 @@ organiserRouter.get("/:eventId/graph", organiserMiddleware, async (req: Request,
         }
         const findEvent = await db.event.findUnique({
             where: {
-                id: eventId,
+                id: eventId as string,
             },
         });
 
@@ -1566,7 +1566,7 @@ organiserRouter.get("/:eventId/graph", organiserMiddleware, async (req: Request,
 
         const eventSlots = await db.eventSlot.findMany({
             where: {
-                eventId: eventId,
+                eventId: eventId as string,
             },
         });
 
@@ -1622,7 +1622,7 @@ organiserRouter.get(
                         event: {
                             organiserId,
                         },
-                        eventId,
+                        eventId: eventId as string,
                     },
                     transactions: {
                         some: {
@@ -1672,7 +1672,7 @@ organiserRouter.get(
                     slots: true,
                 },
                 where: {
-                    id: eventId,
+                    id: eventId as string,
                     organiserId,
                 },
             });
@@ -1724,7 +1724,7 @@ organiserRouter.get(
                     },
                 },
                 where: {
-                    id: eventId,
+                    id: eventId as string,
                 },
             });
 
@@ -1742,7 +1742,7 @@ organiserRouter.get(
 
             const slot = await db.eventSlot.findUnique({
                 where: {
-                    id: slotId,
+                    id: slotId as string,
                 },
             });
 
@@ -1763,7 +1763,7 @@ organiserRouter.get(
                     },
                 },
                 where: {
-                    eventSlotId: slotId,
+                    eventSlotId: slotId as string,
                 },
             });
 

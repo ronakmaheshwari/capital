@@ -418,7 +418,7 @@ ticketRouter.get("/:ticketId", userMiddleware, async (req: Request, res: Respons
                 },
             },
             where: {
-                id: ticketId,
+                id: ticketId as string,
                 userId,
             },
         });
