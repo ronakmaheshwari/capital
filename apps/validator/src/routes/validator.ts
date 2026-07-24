@@ -1526,7 +1526,7 @@ validatorRouter.get(
                     },
                 },
                 where: {
-                    eventSlotId: slotId,
+                    eventSlotId: slotId as string,
                     is_valid: true,
                     is_verified: false,
                 },
@@ -1590,7 +1590,7 @@ validatorRouter.get(
                     },
                 },
                 where: {
-                    eventSlotId: slotId,
+                    eventSlotId: slotId as string,
                     is_valid: true,
                     is_verified: true,
                 },

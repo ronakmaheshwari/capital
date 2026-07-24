@@ -1,14 +1,33 @@
 {
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src"
+        "rootDir": "./src",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "target": "ES2022",
+        "lib": ["es2022"],
+        "strict": false,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "declarationMap": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true
     },
     "exclude": [
         "dist",
-        "node_modules"
+        "node_modules",
+        "src/load.test.ts",
+        "src/stress.test.ts",
+        "src/spike.test.ts",
+        "src/payload.ts",
+        "src/event_load.test.ts",
+        "src/event_spike.test.ts",
+        "src/event_stress.test.ts",
+        "src/run5.ts",
+        "src/validation"
     ],
-    "extends": "@repo/typescript-config/base.json",
     "include": [
-        "src"
+        "src/generator"
     ]
 }
