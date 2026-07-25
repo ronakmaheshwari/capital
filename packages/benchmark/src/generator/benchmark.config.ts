@@ -12,7 +12,8 @@
 const config = {
     // ── Users ────────────────────────────────────────────────────────────────
     /** Total number of benchmark users to create. */
-    users: 1_000,
+    // users: 1_000,
+    users: 500,
 
     /** Email prefix for generated benchmark accounts. */
     userEmailPrefix: "benchmark",
