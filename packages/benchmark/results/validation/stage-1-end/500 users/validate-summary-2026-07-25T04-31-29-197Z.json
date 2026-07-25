@@ -1,0 +1,276 @@
+{
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 123464.001648
+  },
+  "metrics": {
+    "vus": {
+      "contains": "default",
+      "values": {
+        "value": 83,
+        "min": 83,
+        "max": 400
+      },
+      "type": "gauge"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 400,
+        "min": 234,
+        "max": 400
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "validate_success_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "passes": 11409,
+        "fails": 0,
+        "rate": 1
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 14546475,
+        "rate": 117819.56526463873
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 4955.2399596000005,
+        "avg": 4243.1368802232155,
+        "min": 295.843261,
+        "med": 4262.745401,
+        "max": 6039.791606,
+        "p(90)": 4783.3456666
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.024468064072223683,
+        "min": 0,
+        "med": 0,
+        "max": 10.290163
+      }
+    },
+    "http_req_failed": {
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 11409
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 4243.1368802232155,
+        "min": 295.843261,
+        "med": 4262.745401,
+        "max": 6039.791606,
+        "p(90)": 4783.3456666,
+        "p(95)": 4955.2399596000005
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.1345390929967573,
+        "min": 0.019922,
+        "med": 0.089918,
+        "max": 4.716716,
+        "p(90)": 0.19727440000000007,
+        "p(95)": 0.39520580000000016
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 11409,
+        "rate": 92.4075021683441
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 22818,
+        "fails": 0
+      }
+    },
+    "dropped_iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 48592,
+        "rate": 393.5722101292117
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 4263.13989,
+        "max": 6040.795451,
+        "p(90)": 4784.137910400001,
+        "p(95)": 4955.8146286,
+        "avg": 4243.70308678938,
+        "min": 297.415415
+      }
+    },
+    "validate_total_requests": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 11409,
+        "rate": 92.4075021683441
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 11409,
+        "rate": 92.4075021683441
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.051661746866508984,
+        "min": 0.013947,
+        "med": 0.031604,
+        "max": 6.423378,
+        "p(90)": 0.054455200000000016,
+        "p(95)": 0.09628960000000007
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.04450265763870597,
+        "min": 0.00284,
+        "med": 0.00759,
+        "max": 10.372685,
+        "p(90)": 0.010743800000000003,
+        "p(95)": 0.017569600000000008
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 6039.503884,
+        "p(90)": 4783.1844246,
+        "p(95)": 4955.1271322,
+        "avg": 4242.950679383379,
+        "min": 295.63887,
+        "med": 4262.430986
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 4061604,
+        "rate": 32897.0707719305
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 4243.500896257963,
+        "min": 297.171229,
+        "med": 4263.015558,
+        "max": 6040.557202,
+        "p(90)": 4783.9661738,
+        "p(95)": 4955.4667383999995
+      }
+    },
+    "validate_latency_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 4243.1368802232155,
+        "min": 295.843261,
+        "med": 4262.745401,
+        "max": 6039.791606,
+        "p(90)": 4783.3456666,
+        "p(95)": 4955.2399596000005
+      }
+    }
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "POST /validate",
+        "path": "::POST /validate",
+        "id": "c20960be9445df7d43682798e3b607c5",
+        "groups": [],
+        "checks": [
+            {
+              "name": "status is 200",
+              "path": "::POST /validate::status is 200",
+              "id": "df6a86ea94ff094e96c9972693ad0f62",
+              "passes": 11409,
+              "fails": 0
+            },
+            {
+              "name": "response has ticketId",
+              "path": "::POST /validate::response has ticketId",
+              "id": "f37eddd23dc289a1f6c7f6120479cd8e",
+              "passes": 11409,
+              "fails": 0
+            }
+          ]
+      }
+    ],
+    "checks": []
+  }
+}
