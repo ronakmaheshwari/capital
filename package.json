@@ -1,4 +1,20 @@
 {
+    "allowScripts": {
+        "@prisma/client@6.19.3": true,
+        "@prisma/engines@6.19.3": true,
+        "@scarf/scarf@1.4.0": true,
+        "bcrypt@6.0.0": true,
+        "core-js@3.49.0": true,
+        "msw@2.15.0": true,
+        "prisma@6.19.3": true,
+        "puppeteer@24.43.1": true,
+        "sharp@0.34.5": true
+    },
+    "dependencies": {
+        "@zxing/browser": "^0.2.1",
+        "@zxing/library": "^0.23.0",
+        "jszip": "^3.10.1"
+    },
     "devDependencies": {
         "@biomejs/biome": "^2.2.2",
         "@rolldown/pluginutils": "^1.0.1",
@@ -50,19 +66,5 @@
     "workspaces": [
         "apps/*",
         "packages/*"
-    ],
-    "dependencies": {
-        "jszip": "^3.10.1"
-    },
-    "allowScripts": {
-        "@prisma/client@6.19.3": true,
-        "@prisma/engines@6.19.3": true,
-        "@scarf/scarf@1.4.0": true,
-        "bcrypt@6.0.0": true,
-        "core-js@3.49.0": true,
-        "msw@2.15.0": true,
-        "prisma@6.19.3": true,
-        "puppeteer@24.43.1": true,
-        "sharp@0.34.5": true
-    }
+    ]
 }
