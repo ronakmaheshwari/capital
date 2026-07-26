@@ -17,7 +17,7 @@
  *   for the single ticket purchase.
  */
 
-import { db, type BankName } from "@repo/db";
+import { type BankName, db } from "@repo/db";
 import type { BenchmarkConfig } from "./benchmark.config.js";
 import type { BenchmarkUser } from "./createUsers.js";
 
@@ -47,10 +47,15 @@ export interface BenchmarkCard {
 function generateCandidateNumber(bankName: BankName): string {
     const prefix = BANK_PREFIXES[bankName];
     const segments = Array.from(
-        { length: 3 },
+        {
+            length: 3,
+        },
         () => Math.floor(1000 + Math.random() * 9000),
     );
-    return [prefix, ...segments].join("-");
+    return [
+        prefix,
+        ...segments,
+    ].join("-");
 }
 
 /**
@@ -61,7 +66,9 @@ async function generateUniqueCardNumber(bankName: BankName): Promise<string> {
     while (true) {
         const candidate = generateCandidateNumber(bankName);
         const existing = await db.card.findUnique({
-            where: { card_number: candidate },
+            where: {
+                card_number: candidate,
+            },
         });
         if (!existing) return candidate;
     }
@@ -73,13 +80,12 @@ async function generateUniqueCardNumber(bankName: BankName): Promise<string> {
  * If the user already has cards, the first one is returned (idempotent).
  * Otherwise, a new card is created with config.cardBalance balance.
  */
-async function createOrGetCard(
-    user: BenchmarkUser,
-    cardBalance: number,
-): Promise<BenchmarkCard> {
+async function createOrGetCard(user: BenchmarkUser, cardBalance: number): Promise<BenchmarkCard> {
     // Idempotency check: return existing card if present
     const existing = await db.card.findFirst({
-        where: { userId: user.id },
+        where: {
+            userId: user.id,
+        },
     });
 
     if (existing) {
@@ -93,8 +99,7 @@ async function createOrGetCard(
 
     // Select a bank deterministically based on user email suffix to spread load
     const bankIndex =
-        parseInt(user.email.replace(/\D/g, "").slice(-2) || "0", 10) %
-        ALL_BANKS.length;
+        parseInt(user.email.replace(/\D/g, "").slice(-2) || "0", 10) % ALL_BANKS.length;
     const bankName = ALL_BANKS[bankIndex] ?? "hdfc";
     const cardNumber = await generateUniqueCardNumber(bankName);
 

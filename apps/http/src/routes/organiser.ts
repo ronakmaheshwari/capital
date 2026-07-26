@@ -563,7 +563,11 @@ organiserRouter.get("/wallet", organiserMiddleware, async (req: Request, res: Re
                                         ? {
                                               ticket: {
                                                   eventSlot: {
-                                                      eventId: String(Array.isArray(eventId) ? eventId[0] : eventId),
+                                                      eventId: String(
+                                                          Array.isArray(eventId)
+                                                              ? eventId[0]
+                                                              : eventId,
+                                                      ),
                                                   },
                                               },
                                           }
@@ -631,7 +635,11 @@ organiserRouter.get("/wallet", organiserMiddleware, async (req: Request, res: Re
                                         ? {
                                               ticket: {
                                                   eventSlot: {
-                                                      eventId: String(Array.isArray(eventId) ? eventId[0] : eventId),
+                                                      eventId: String(
+                                                          Array.isArray(eventId)
+                                                              ? eventId[0]
+                                                              : eventId,
+                                                      ),
                                                   },
                                               },
                                           }

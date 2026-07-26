@@ -870,7 +870,7 @@ eventRouter.delete(
                     where: {
                         canceled_at: null,
                         ticket: {
-                            eventSlotId: slotId as string, 
+                            eventSlotId: slotId as string,
                             status: "ISSUED",
                         },
                         type: "PURCHASE",

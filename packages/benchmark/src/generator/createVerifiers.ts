@@ -36,13 +36,17 @@ const JWT_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
  */
 async function createOrGetVerifier(
     index: number,
-    config: BenchmarkConfig,
+    _config: BenchmarkConfig,
     saltRounds: number,
     jwtSecret: string,
 ): Promise<BenchmarkVerifier> {
     const email = `benchmarkverifier${String(index).padStart(3, "0")}@test.com`;
 
-    const existing = await db.user.findUnique({ where: { email } });
+    const existing = await db.user.findUnique({
+        where: {
+            email,
+        },
+    });
 
     let userId: string;
 
@@ -50,8 +54,13 @@ async function createOrGetVerifier(
         // Ensure role is verifier (may have been created as user in a prior run)
         if (existing.role !== "verifier") {
             await db.user.update({
-                data: { is_verified: true, role: "verifier" },
-                where: { id: existing.id },
+                data: {
+                    is_verified: true,
+                    role: "verifier",
+                },
+                where: {
+                    id: existing.id,
+                },
             });
         }
         userId = existing.id;
@@ -73,17 +82,34 @@ async function createOrGetVerifier(
     // Issue a fresh 7-day JWT and persist it
     const expiresAt = new Date(Date.now() + JWT_EXPIRY_SECONDS * 1000);
     const token = jwt.sign(
-        { userId },
+        {
+            userId,
+        },
         jwtSecret,
-        { expiresIn: JWT_EXPIRY_SECONDS as SignOptions["expiresIn"] },
+        {
+            expiresIn: JWT_EXPIRY_SECONDS as SignOptions["expiresIn"],
+        },
     );
 
-    await db.jwtToken.deleteMany({ where: { userId } });
+    await db.jwtToken.deleteMany({
+        where: {
+            userId,
+        },
+    });
     await db.jwtToken.create({
-        data: { expires_at: expiresAt, issued_at: new Date(), token, userId },
+        data: {
+            expires_at: expiresAt,
+            issued_at: new Date(),
+            token,
+            userId,
+        },
     });
 
-    return { email, id: userId, token };
+    return {
+        email,
+        id: userId,
+        token,
+    };
 }
 
 /**

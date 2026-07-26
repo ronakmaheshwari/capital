@@ -10,16 +10,8 @@
  */
 
 const config = {
-    // ── Users ────────────────────────────────────────────────────────────────
-    /** Total number of benchmark users to create. */
-    // users: 1_000,
-    users: 500,
-
-    /** Email prefix for generated benchmark accounts. */
-    userEmailPrefix: "benchmark",
-
-    /** Domain suffix for generated benchmark accounts. */
-    userEmailDomain: "test.com",
+    /** Path for users that failed during generation. */
+    failedOutput: "failed-users.json",
 
     // ── Organiser ────────────────────────────────────────────────────────────
     /** Organiser account that owns the benchmark event. */
@@ -27,9 +19,9 @@ const config = {
     organiserFirstName: "Benchmark",
     organiserLastName: "Organiser",
 
-    // ── Event ────────────────────────────────────────────────────────────────
-    /** Title of the benchmark event (used for idempotency lookup). */
-    eventTitle: "Benchmark Event",
+    // ── Output ───────────────────────────────────────────────────────────────
+    /** Path (relative to generator working directory) for benchmark records. */
+    output: "validation-data.json",
 
     /** Total seat capacity for the single benchmark slot. */
     slotCapacity: 100_000,
@@ -40,16 +32,20 @@ const config = {
      */
     ticketPrice: 0,
 
-    // ── Cards ────────────────────────────────────────────────────────────────
-    /** Starting balance (INR) assigned to every benchmark user's card. */
-    cardBalance: 100_000,
+    /** Domain suffix for generated benchmark accounts. */
+    userEmailDomain: "test.com",
 
-    // ── Concurrency ──────────────────────────────────────────────────────────
-    /**
-     * Maximum number of users processed in parallel per batch.
-     * Increase carefully — each unit opens ~3 DB connections.
-     */
-    concurrency: 25,
+    /** Email prefix for generated benchmark accounts. */
+
+    /** Email prefix for generated benchmark accounts. */
+    userEmailPrefix: "benchmark",
+    // ── Users ────────────────────────────────────────────────────────────────
+    /** Total number of benchmark users to create. */
+    // users: 1_000,
+
+    // ── Users ────────────────────────────────────────────────────────────────
+    /** Total number of benchmark users to create. */
+    users: 1_000,
 
     // ── Verifiers ─────────────────────────────────────────────────────────────
     /**
@@ -59,14 +55,6 @@ const config = {
      * The /validator/validate endpoint requires role=verifier.
      */
     verifierCount: 10,
-
-
-    // ── Output ───────────────────────────────────────────────────────────────
-    /** Path (relative to generator working directory) for benchmark records. */
-    output: "validation-data.json",
-
-    /** Path for users that failed during generation. */
-    failedOutput: "failed-users.json",
 } as const;
 
 export default config;

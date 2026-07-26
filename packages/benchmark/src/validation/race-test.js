@@ -1,21 +1,19 @@
-import http from "k6/http";
 import { check, sleep } from "k6";
-import { Counter } from "k6/metrics";
 import { SharedArray } from "k6/data";
+import http from "k6/http";
+import { Counter } from "k6/metrics";
 
-const tokens = new SharedArray("validator-tokens", function () {
-    return JSON.parse(open("./tokens.json"));
-});
+const tokens = new SharedArray("validator-tokens", () => JSON.parse(open("./tokens.json")));
 
 export const options = {
     scenarios: {
         race_test: {
+            duration: "30s",
             executor: "constant-arrival-rate",
+            maxVUs: 500,
+            preAllocatedVUs: 200,
             rate: 500,
             timeUnit: "1s",
-            duration: "30s",
-            preAllocatedVUs: 200,
-            maxVUs: 500,
         },
     },
 };
@@ -39,16 +37,12 @@ export default function () {
 
     const params = {
         headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
         },
     };
 
-    const res = http.post(
-        `${BASE_URL}/api/v1/validator/validate/otp`,
-        payload,
-        params
-    );
+    const res = http.post(`${BASE_URL}/api/v1/validator/validate/otp`, payload, params);
 
     if (res.status === 200) {
         success.add(1);
@@ -56,12 +50,10 @@ export default function () {
         duplicate.add(1);
     } else {
         failed.add(1);
-        console.log(`FAILED ${res.status}: ${res.body}`);
     }
 
     check(res, {
-        "response handled": (r) =>
-            r.status === 200 || r.status === 400 || r.status === 409,
+        "response handled": (r) => r.status === 200 || r.status === 400 || r.status === 409,
     });
 
     sleep(Math.random() * 0.05);

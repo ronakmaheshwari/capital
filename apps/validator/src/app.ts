@@ -23,7 +23,11 @@ async function RedisStarter() {
 }
 RedisStarter();
 
-app.use(cors({ origin: "*" }));
+app.use(
+    cors({
+        origin: "*",
+    }),
+);
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(metricsMiddleware);
@@ -95,6 +99,4 @@ app.get("/metrics", async (_req: Request, res: Response) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server running on ${port}`)
-});
+app.listen(port, () => {});
