@@ -10,21 +10,6 @@
  */
 
 const config = {
-    // ── Cards ────────────────────────────────────────────────────────────────
-    /** Starting balance (INR) assigned to every benchmark user's card. */
-    cardBalance: 100_000,
-
-    // ── Concurrency ──────────────────────────────────────────────────────────
-    /**
-     * Maximum number of users processed in parallel per batch.
-     * Increase carefully — each unit opens ~3 DB connections.
-     */
-    concurrency: 25,
-
-    // ── Event ────────────────────────────────────────────────────────────────
-    /** Title of the benchmark event (used for idempotency lookup). */
-    eventTitle: "Benchmark Event",
-
     /** Path for users that failed during generation. */
     failedOutput: "failed-users.json",
 
@@ -51,7 +36,13 @@ const config = {
     userEmailDomain: "test.com",
 
     /** Email prefix for generated benchmark accounts. */
+
+    /** Email prefix for generated benchmark accounts. */
     userEmailPrefix: "benchmark",
+    // ── Users ────────────────────────────────────────────────────────────────
+    /** Total number of benchmark users to create. */
+    // users: 1_000,
+
     // ── Users ────────────────────────────────────────────────────────────────
     /** Total number of benchmark users to create. */
     users: 1_000,

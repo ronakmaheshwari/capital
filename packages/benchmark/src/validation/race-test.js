@@ -25,7 +25,7 @@ const failed = new Counter("failed_requests");
 const BASE_URL = "http://localhost:3003";
 
 // Ticket ID returned from /validator/validate
-const TICKET_ID = "7def4997-23a3-4fed-bef8-eba3c27998bd";
+const TICKET_ID = "a70f70cd-792e-4879-b63a-041c4f42de25";
 
 export default function () {
     const token = tokens[(__VU - 1) % tokens.length];
