@@ -1,5 +1,7 @@
 import dotenv from "dotenv";
+
 dotenv.config();
+
 import { Resend } from "resend";
 import OTPEmailTemplate from "../templates/emailTemplate";
 import ForgotPasswordOTPEmailTemplate from "../templates/forgetPasswordTemplate";
@@ -9,7 +11,7 @@ if (!apiKey) {
     throw new Error("Missing RESEND_API_KEY in environment");
 }
 const from = process.env.RESEND_EMAIL_DOMAIN;
-if(!from) {
+if (!from) {
     throw new Error("Missing RESEND_EMAIL_DOMAIN in environment");
 }
 

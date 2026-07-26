@@ -45,7 +45,9 @@ export async function ensureWallets(
                         userId: user.id,
                     },
                     update: {}, // No-op if wallet already exists
-                    where: { userId: user.id },
+                    where: {
+                        userId: user.id,
+                    },
                 }),
             ),
         );

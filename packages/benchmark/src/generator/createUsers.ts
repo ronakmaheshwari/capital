@@ -41,25 +41,40 @@ export interface FailedUser {
  *   1  → "benchmark00001@test.com"
  *   42 → "benchmark00042@test.com"
  */
-function formatEmail(
-    index: number,
-    prefix: string,
-    domain: string,
-): string {
+function formatEmail(index: number, prefix: string, domain: string): string {
     return `${prefix}${String(index).padStart(5, "0")}@${domain}`;
 }
 
 /**
  * Returns a deterministic first/last name pair for a given index.
  */
-function nameForIndex(index: number): { firstName: string; lastName: string } {
+function nameForIndex(index: number): {
+    firstName: string;
+    lastName: string;
+} {
     const firstNames = [
-        "Alice", "Bob", "Carol", "Dave", "Eve",
-        "Frank", "Grace", "Hank", "Irene", "Jack",
+        "Alice",
+        "Bob",
+        "Carol",
+        "Dave",
+        "Eve",
+        "Frank",
+        "Grace",
+        "Hank",
+        "Irene",
+        "Jack",
     ];
     const lastNames = [
-        "Smith", "Jones", "Williams", "Taylor", "Brown",
-        "Davies", "Evans", "Wilson", "Thomas", "Roberts",
+        "Smith",
+        "Jones",
+        "Williams",
+        "Taylor",
+        "Brown",
+        "Davies",
+        "Evans",
+        "Wilson",
+        "Thomas",
+        "Roberts",
     ];
     return {
         firstName: firstNames[index % firstNames.length] ?? "Benchmark",
@@ -81,7 +96,11 @@ export async function createOrGetUser(
     const email = formatEmail(index, config.userEmailPrefix, config.userEmailDomain);
     const { firstName, lastName } = nameForIndex(index);
 
-    const existing = await db.user.findUnique({ where: { email } });
+    const existing = await db.user.findUnique({
+        where: {
+            email,
+        },
+    });
 
     if (existing) {
         if (existing.encrypted_private_key && existing.public_key) {
@@ -98,10 +117,21 @@ export async function createOrGetUser(
         const { publicKey, privateKey } = await generateKeyPair();
         const encrypted_private_key = encrypt(privateKey);
         await db.user.update({
-            data: { encrypted_private_key, is_verified: true, public_key: publicKey },
-            where: { id: existing.id },
+            data: {
+                encrypted_private_key,
+                is_verified: true,
+                public_key: publicKey,
+            },
+            where: {
+                id: existing.id,
+            },
         });
-        return { email: existing.email, id: existing.id, privateKey, publicKey };
+        return {
+            email: existing.email,
+            id: existing.id,
+            privateKey,
+            publicKey,
+        };
     }
 
     // New user
@@ -122,7 +152,12 @@ export async function createOrGetUser(
         },
     });
 
-    return { email: user.email, id: user.id, privateKey, publicKey };
+    return {
+        email: user.email,
+        id: user.id,
+        privateKey,
+        publicKey,
+    };
 }
 
 /**
@@ -134,7 +169,10 @@ export async function createBenchmarkUsers(
     config: BenchmarkConfig,
     saltRounds: number,
     onProgress?: (completed: number, total: number) => void,
-): Promise<{ users: BenchmarkUser[]; failed: FailedUser[] }> {
+): Promise<{
+    users: BenchmarkUser[];
+    failed: FailedUser[];
+}> {
     const total = config.users;
     const batchSize = config.concurrency;
     const users: BenchmarkUser[] = [];
@@ -143,7 +181,9 @@ export async function createBenchmarkUsers(
     for (let batchStart = 1; batchStart <= total; batchStart += batchSize) {
         const batchEnd = Math.min(batchStart + batchSize - 1, total);
         const indices = Array.from(
-            { length: batchEnd - batchStart + 1 },
+            {
+                length: batchEnd - batchStart + 1,
+            },
             (_, i) => batchStart + i,
         );
 
@@ -172,5 +212,8 @@ export async function createBenchmarkUsers(
         onProgress?.(Math.min(batchEnd, total), total);
     }
 
-    return { failed, users };
+    return {
+        failed,
+        users,
+    };
 }

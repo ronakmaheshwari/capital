@@ -1,20 +1,20 @@
-import http from "k6/http";
 import { check } from "k6";
 import { SharedArray } from "k6/data";
+import http from "k6/http";
 
 const validationData = new SharedArray("validation-data", () =>
-    JSON.parse(open("./validation-data.json"))
+    JSON.parse(open("./validation-data.json")),
 );
 
 export const options = {
     scenarios: {
         validation: {
+            duration: "2m",
             executor: "constant-arrival-rate",
+            maxVUs: 300,
+            preAllocatedVUs: 100,
             rate: 1000,
             timeUnit: "1s",
-            duration: "2m",
-            preAllocatedVUs: 100,
-            maxVUs: 300,
         },
     },
 };
@@ -35,10 +35,10 @@ export default function () {
                 Authorization: `Bearer ${data.token}`,
                 "Content-Type": "application/json",
             },
-        }
+        },
     );
 
-    check(res,{
-        "200": r=>r.status===200
+    check(res, {
+        200: (r) => r.status === 200,
     });
 }

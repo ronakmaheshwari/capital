@@ -19,23 +19,27 @@
  *   This file reproduces only the encrypt/decrypt functions and their deps.
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load .env from the monorepo root and apps/http as a fallback.
-dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
-dotenv.config({ path: path.resolve(__dirname, "../../../../apps/http/.env") });
+dotenv.config({
+    path: path.resolve(__dirname, "../../../../.env"),
+});
+dotenv.config({
+    path: path.resolve(__dirname, "../../../../apps/http/.env"),
+});
 
 const SECRET_SALT = process.env.SECRET_SALT;
 
 if (!SECRET_SALT) {
     throw new Error(
         "[encryptHelper] SECRET_SALT is not set. " +
-        "Please ensure it is present in packages/benchmark/.env or apps/http/.env.",
+            "Please ensure it is present in packages/benchmark/.env or apps/http/.env.",
     );
 }
 

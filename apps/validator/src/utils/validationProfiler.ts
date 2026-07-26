@@ -1,12 +1,12 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 const file = path.join(process.cwd(), "validation-profile.csv");
 
 if (!fs.existsSync(file)) {
     fs.writeFileSync(
         file,
-        "timestamp,total,decrypt,signature,ticketLookup,userLookup,otpClaim,ticketClaim,verificationInsert\n"
+        "timestamp,total,decrypt,signature,ticketLookup,userLookup,otpClaim,ticketClaim,verificationInsert\n",
     );
 }
 
@@ -23,6 +23,6 @@ export function appendProfile(data: {
 }) {
     fs.appendFileSync(
         file,
-        `${new Date().toISOString()},${data.total},${data.decrypt},${data.verify},${data.ticketLookup},${data.userLookup}\n`
+        `${new Date().toISOString()},${data.total},${data.decrypt},${data.verify},${data.ticketLookup},${data.userLookup}\n`,
     );
 }

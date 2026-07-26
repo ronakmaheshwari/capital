@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("node:fs");
 
 try {
     // Read all lines from validator_tokens.txt
@@ -10,8 +10,6 @@ try {
 
     // Save as JSON array
     fs.writeFileSync("tokens.json", JSON.stringify(lines, null, 2));
-
-    console.log(`Converted ${lines.length} tokens into tokens.json`);
 } catch (error) {
     console.error("Failed to convert tokens:", error.message);
 }

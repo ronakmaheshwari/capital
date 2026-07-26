@@ -1,9 +1,13 @@
 import dotenv from "dotenv";
+
 dotenv.config();
+
+import fs from "node:fs/promises";
+import path from "node:path";
 import redisCache from "@repo/cache";
 import db, { type Prisma } from "@repo/db";
 import { decryptPayload, verifySignedTicket } from "@repo/keygen";
-import { AlphabeticOTP, NumericOTP } from "@repo/notifications";
+import { AlphabeticOTP } from "@repo/notifications";
 import { otpLimits, resetPasswordLimits } from "@repo/ratelimit";
 import {
     ForgetType,
@@ -23,8 +27,6 @@ import express, { type Request, type Response, type Router } from "express";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import multer from "multer";
 import validatorMiddleware, { unVerifiedValidatorMiddleware } from "../middleware";
-import fs from "fs/promises";
-import path from "path";
 import { appendProfile } from "../utils/validationProfiler";
 
 const validatorRouter: Router = express.Router();
@@ -164,39 +166,37 @@ validatorRouter.post(
     },
 );
 
-validatorRouter.post("/sign", async(req: Request, res: Response) => {
+validatorRouter.post("/sign", async (req: Request, res: Response) => {
     try {
-        const {email} = req.body;
-        console.log(email);
-        if(!email) {
+        const { email } = req.body;
+        if (!email) {
             return res.status(404).json({
                 message: "Email or Password must be provided",
-            })
+            });
         }
 
         const existingUser = await db.user.findUnique({
             where: {
-                email: email
-            }
-        })
+                email: email,
+            },
+        });
 
-        if(existingUser) {
-            
-            if(existingUser.is_verified) {
+        if (existingUser) {
+            if (existingUser.is_verified) {
                 return res.status(409).json({
-                    message: "Account already exists. Please login."
-                })
+                    message: "Account already exists. Please login.",
+                });
             }
 
             return res.status(409).json({
-                message: "Account already exists. Please login."
-            })
+                message: "Account already exists. Please login.",
+            });
         }
 
         const firstName = AlphabeticOTP(8);
         const lastName = AlphabeticOTP(8);
-        const password = "Pass@123"
-        const hashedPassword = await bcrypt.hash(password,saltRounds);
+        const password = "Pass@123";
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
         const user = await db.user.create({
             data: {
                 email,
@@ -206,7 +206,7 @@ validatorRouter.post("/sign", async(req: Request, res: Response) => {
                 password: hashedPassword,
                 role: "verifier",
             },
-        })
+        });
 
         const token = generateToken(user.id, "2d");
         try {
@@ -216,12 +216,12 @@ validatorRouter.post("/sign", async(req: Request, res: Response) => {
             console.error("Failed to write JWT log:", logErr);
         }
         await db.jwtToken.create({
-                data: {
-                    expires_at: new Date(Date.now() + 10 * 60 * 1000),
-                    issued_at: new Date(),
-                    token,
-                    userId: user.id,
-                },
+            data: {
+                expires_at: new Date(Date.now() + 10 * 60 * 1000),
+                issued_at: new Date(),
+                token,
+                userId: user.id,
+            },
         });
 
         return res.status(201).json({
@@ -240,7 +240,7 @@ validatorRouter.post("/sign", async(req: Request, res: Response) => {
             message: "Internal server error",
         });
     }
-})
+});
 
 /**
  * Signin a User
@@ -310,7 +310,6 @@ validatorRouter.post(
                     },
                 });
             });
-
 
             return res.status(200).json({
                 message: "Signin successful",
@@ -1203,10 +1202,10 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
                 message: "Missing nonce or ciphertext",
             });
         }
-        
+
         const t0 = performance.now();
         const decryptedTicket = await decryptPayload(ciphertext, nonce);
-        const decrypt = performance.now()-t0;
+        const decrypt = performance.now() - t0;
 
         const ticketId = decryptedTicket.ticketId;
 
@@ -1216,8 +1215,7 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
                 id: ticketId,
             },
         });
-        const ticketLookup = performance.now()-t2;
-
+        const ticketLookup = performance.now() - t2;
 
         if (!checkId) {
             return res.status(400).json({
@@ -1231,10 +1229,9 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
                 id: checkId.userId,
             },
         });
-        const userLookup = performance.now()-t3;
+        const userLookup = performance.now() - t3;
 
-
-        if (!publicKeyObj || !publicKeyObj.public_key) {
+        if (!publicKeyObj?.public_key) {
             return res.status(400).json({
                 message: "User public key not found",
             });
@@ -1248,7 +1245,7 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
             },
             publicKeyObj.public_key,
         );
-        const verify = performance.now()-t1;
+        const verify = performance.now() - t1;
 
         if (!validateTicket.valid) {
             return res.status(400).json({
@@ -1260,15 +1257,17 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
         //const otp = NumericOTP(4).toString();
         const t4 = performance.now();
         await db.otp.updateMany({
-            where: {
-                ticketId: checkId.id,
-                purpose: "ticket_validation",
-                is_used: false,
+            data: {
+                is_used: true,
             },
-            data: { is_used: true },
+            where: {
+                is_used: false,
+                purpose: "ticket_validation",
+                ticketId: checkId.id,
+            },
         });
 
-        const otpRecord = await db.otp.create({
+        const _otpRecord = await db.otp.create({
             data: {
                 expires_at: new Date(Date.now() + 60 * 60 * 1000),
                 otp_code: otp,
@@ -1286,17 +1285,17 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
         //     }),
         // );
         // await sendEmailOtp(publicKeyObj.email, otpRecord.otp_code);
-        const otpInsert = performance.now()-t4;
+        const otpInsert = performance.now() - t4;
 
-        const endpoint = performance.now()-endpointStart;
+        const endpoint = performance.now() - endpointStart;
 
         appendProfile({
-            total: endpoint,
             decrypt,
-            verify,
-            ticketLookup,
-            userLookup,
             otpInsert,
+            ticketLookup,
+            total: endpoint,
+            userLookup,
+            verify,
         });
 
         return res.status(200).json({
@@ -1310,7 +1309,7 @@ validatorRouter.post("/validate", validatorMiddleware, async (req: Request, res:
             success: false,
         });
     }
-})
+});
 
 validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, res: Response) => {
     try {
@@ -1319,37 +1318,43 @@ validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, 
 
         if (!otp_code || !ticketId) {
             return res.status(400).json({
-                message: "No Otp or TicketId was provided",
                 error: true,
+                message: "No Otp or TicketId was provided",
                 success: false,
             });
         }
 
         const findTicket = await db.ticket.findUnique({
-            where: { id: ticketId as string },
+            where: {
+                id: ticketId as string,
+            },
         });
 
         if (!findTicket) {
             return res.status(404).json({
-                message: "Invalid ticket Id was provided",
                 error: true,
+                message: "Invalid ticket Id was provided",
                 success: false,
             });
         }
 
         // Quick pre-check outside the transaction (cheap fail-fast; not the real guard)
-        if (!findTicket.is_valid || findTicket.status === "CANCELLED" || findTicket.status === "EXPIRED") {
+        if (
+            !findTicket.is_valid ||
+            findTicket.status === "CANCELLED" ||
+            findTicket.status === "EXPIRED"
+        ) {
             return res.status(409).json({
-                message: "The given ticket is invalid",
                 error: true,
+                message: "The given ticket is invalid",
                 success: false,
             });
         }
 
         if (findTicket.is_verified || findTicket.status === "USED") {
             return res.status(409).json({
-                message: "The given ticket is already used",
                 error: true,
+                message: "The given ticket is already used",
                 success: false,
             });
         }
@@ -1358,32 +1363,35 @@ validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, 
         // Safe to remove once confirmed working.
 
         const debugOtp = await db.otp.findFirst({
-            where: { ticketId: findTicket.id, otp_code: otp_code as string },
-            orderBy: { created_at: "desc" },
+            orderBy: {
+                created_at: "desc",
+            },
+            where: {
+                otp_code: otp_code as string,
+                ticketId: findTicket.id,
+            },
         });
-
-        console.log("Matching OTP row (pre-transaction):", debugOtp);
 
         if (!debugOtp) {
             return res.status(404).json({
-                message: "Invalid OTP code",
                 error: true,
+                message: "Invalid OTP code",
                 success: false,
             });
         }
 
         if (debugOtp.is_used) {
             return res.status(409).json({
-                message: "This OTP has already been used",
                 error: true,
+                message: "This OTP has already been used",
                 success: false,
             });
         }
 
         if (debugOtp.expires_at < new Date()) {
             return res.status(410).json({
-                message: "OTP has expired",
                 error: true,
+                message: "OTP has expired",
                 success: false,
             });
         }
@@ -1392,14 +1400,18 @@ validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, 
             // Atomic claim on the OTP: only matches if unused. This is the real guard,
             // not the earlier findTicket checks above, which can go stale under concurrency.
             const otpUpdate = await tx.otp.updateMany({
+                data: {
+                    is_used: true,
+                },
                 where: {
-                    ticketId: findTicket.id,
+                    expires_at: {
+                        gt: new Date(),
+                    },
+                    is_used: false,
                     otp_code: otp_code as string,
                     purpose: "ticket_validation",
-                    is_used: false,
-                    expires_at: { gt: new Date() },
+                    ticketId: findTicket.id,
                 },
-                data: { is_used: true },
             });
 
             if (otpUpdate.count === 0) {
@@ -1409,16 +1421,22 @@ validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, 
             // Atomic claim on the ticket: only matches if still unverified.
             // This is what actually prevents double-redemption under load.
             const ticketUpdate = await tx.ticket.updateMany({
+                data: {
+                    is_verified: true,
+                    scanned_at: new Date(),
+                    scannedById: verifierId as string,
+                    status: "USED",
+                },
                 where: {
                     id: findTicket.id,
                     is_verified: false,
-                    status: { notIn: ["USED", "CANCELLED", "EXPIRED"] },
-                },
-                data: {
-                    is_verified: true,
-                    status: "USED",
-                    scanned_at: new Date(),
-                    scannedById: verifierId as string,
+                    status: {
+                        notIn: [
+                            "USED",
+                            "CANCELLED",
+                            "EXPIRED",
+                        ],
+                    },
                 },
             });
 
@@ -1428,59 +1446,66 @@ validatorRouter.post("/validate/otp", validatorMiddleware, async (req: Request, 
 
             // Fetch the actual OTP row so we have its id for the verification + FK link
             const otpRecord = await tx.otp.findFirst({
-                where: {
-                    ticketId: findTicket.id,
-                    otp_code: otp_code as string,
+                orderBy: {
+                    created_at: "desc",
                 },
-                orderBy: { created_at: "desc" },
+                where: {
+                    otp_code: otp_code as string,
+                    ticketId: findTicket.id,
+                },
             });
 
             const verification = await tx.ticketVerification.create({
                 data: {
-                    ticketId: findTicket.id,
-                    verifierId: verifierId as string,
-                    verification_time: new Date(),
                     is_successful: true,
+                    ticketId: findTicket.id,
+                    verification_time: new Date(),
+                    verifierId: verifierId as string,
                 },
             });
 
             // Link the OTP to this verification record
             if (otpRecord) {
                 await tx.otp.update({
-                    where: { id: otpRecord.id },
-                    data: { ticketVerificationId: verification.id },
+                    data: {
+                        ticketVerificationId: verification.id,
+                    },
+                    where: {
+                        id: otpRecord.id,
+                    },
                 });
             }
 
-            return { verification };
+            return {
+                verification,
+            };
         });
 
         return res.status(200).json({
-            message: "Ticket validated successfully",
-            error: false,
-            success: true,
             data: result,
+            error: false,
+            message: "Ticket validated successfully",
+            success: true,
         });
-
     } catch (error: any) {
         if (error.message === "OTP_INVALID_OR_USED") {
             return res.status(404).json({
-                message: "Invalid, expired, or already-used OTP",
                 error: true,
+                message: "Invalid, expired, or already-used OTP",
                 success: false,
             });
         }
         if (error.message === "TICKET_ALREADY_USED") {
             return res.status(409).json({
-                message: "The given ticket is already used",
                 error: true,
+                message: "The given ticket is already used",
                 success: false,
             });
         }
         console.error("Validation Error:", error);
         return res.status(500).json({
-            message: "Internal server error",
             error: true,
+            message: "Internal server error",
             success: false,
         });
     }

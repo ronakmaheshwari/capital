@@ -72,16 +72,18 @@ export async function createOrGetBenchmarkEvent(
 
     // --- Idempotency: look up existing slot ---
     const existingSlot = await db.eventSlot.findFirst({
-        where: { eventId: event.id },
+        where: {
+            eventId: event.id,
+        },
     });
 
     if (existingSlot) {
         return {
             capacity: existingSlot.capacity,
+            endTime: existingSlot.end_time,
             eventDate: existingSlot.event_date,
             eventId: event.id,
             eventTitle: event.title,
-            endTime: existingSlot.end_time,
             locationName: existingSlot.location_name,
             price: Number(existingSlot.price),
             slotId: existingSlot.id,
@@ -116,10 +118,10 @@ export async function createOrGetBenchmarkEvent(
 
     return {
         capacity: slot.capacity,
+        endTime: slot.end_time,
         eventDate: slot.event_date,
         eventId: event.id,
         eventTitle: event.title,
-        endTime: slot.end_time,
         locationName: slot.location_name,
         price: Number(slot.price),
         slotId: slot.id,

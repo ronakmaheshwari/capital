@@ -44,9 +44,7 @@ export interface ValidationPayload {
  * @param tickets - Array of ticket records from purchaseTickets.ts
  * @returns ValidationPayload array ready for JSON serialisation
  */
-export function buildValidationPayloads(
-    tickets: TicketRecord[],
-): ValidationPayload[] {
+export function buildValidationPayloads(tickets: TicketRecord[]): ValidationPayload[] {
     const payloads: ValidationPayload[] = [];
 
     for (const ticket of tickets) {
@@ -54,7 +52,7 @@ export function buildValidationPayloads(
             // This should never happen in normal operation. Log and skip.
             console.warn(
                 `[encryptTickets] WARNING: ticket ${ticket.ticketId} ` +
-                `has empty ciphertext/nonce — skipped.`,
+                    `has empty ciphertext/nonce — skipped.`,
             );
             continue;
         }
@@ -80,9 +78,10 @@ export function buildValidationPayloads(
  * @param payload - Any serialisable object to encrypt
  * @returns { ciphertext: string, nonce: string } in Base64
  */
-export async function reEncryptPayload(
-    payload: Record<string, unknown>,
-): Promise<{ ciphertext: string; nonce: string }> {
+export async function reEncryptPayload(payload: Record<string, unknown>): Promise<{
+    ciphertext: string;
+    nonce: string;
+}> {
     const result = await encryptPayload(payload as unknown as Parameters<typeof encryptPayload>[0]);
     return {
         ciphertext: result.cipherText,

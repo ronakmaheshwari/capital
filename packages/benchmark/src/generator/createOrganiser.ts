@@ -38,7 +38,9 @@ export async function createOrGetOrganiser(
 
     // --- Idempotency check ---
     const existing = await db.user.findUnique({
-        where: { email: organiserEmail },
+        where: {
+            email: organiserEmail,
+        },
     });
 
     let organiserId: string;
@@ -50,8 +52,13 @@ export async function createOrGetOrganiser(
         // created as a different role in a previous partial run).
         if (!existing.is_verified || existing.role !== "organiser") {
             await db.user.update({
-                data: { is_verified: true, role: "organiser" },
-                where: { id: existing.id },
+                data: {
+                    is_verified: true,
+                    role: "organiser",
+                },
+                where: {
+                    id: existing.id,
+                },
             });
         }
     } else {
@@ -80,19 +87,25 @@ export async function createOrGetOrganiser(
             userId: organiserId,
         },
         update: {}, // Keep existing balance intact on re-run
-        where: { userId: organiserId },
+        where: {
+            userId: organiserId,
+        },
     });
 
     // --- Ensure organiser has at least one card ---
     const existingCard = await db.card.findFirst({
-        where: { userId: organiserId },
+        where: {
+            userId: organiserId,
+        },
     });
 
     if (!existingCard) {
         // Use a deterministic card number for the organiser to keep idempotency
         const cardNumber = "5210-9999-9999-0001";
         const alreadyTaken = await db.card.findUnique({
-            where: { card_number: cardNumber },
+            where: {
+                card_number: cardNumber,
+            },
         });
 
         if (!alreadyTaken) {
@@ -107,5 +120,8 @@ export async function createOrGetOrganiser(
         }
     }
 
-    return { email: organiserEmail, id: organiserId };
+    return {
+        email: organiserEmail,
+        id: organiserId,
+    };
 }

@@ -27,12 +27,12 @@
 
 import { db } from "@repo/db";
 import { createSignedTicket } from "@repo/keygen";
-import { Decimal } from "decimal.js";
 import { AlphanumericOTP } from "@repo/notifications";
-import type { BenchmarkEventSlot } from "./createEvent.js";
-import type { BenchmarkCard } from "./createCards.js";
-import type { BenchmarkUser } from "./createUsers.js";
+import { Decimal } from "decimal.js";
 import type { BenchmarkConfig } from "./benchmark.config.js";
+import type { BenchmarkCard } from "./createCards.js";
+import type { BenchmarkEventSlot } from "./createEvent.js";
+import type { BenchmarkUser } from "./createUsers.js";
 import { decrypt } from "./encryptHelper.js";
 
 /** The benchmark record produced for a single user. */
@@ -66,7 +66,7 @@ export async function purchaseOrGetTicket(
         },
     });
 
-    if (existingTicket && existingTicket.signature) {
+    if (existingTicket?.signature) {
         // Parse stored signed payload to extract ciphertext + nonce
         try {
             const stored = JSON.parse(existingTicket.signature) as {
@@ -86,7 +86,11 @@ export async function purchaseOrGetTicket(
         }
 
         // Re-sign the ticket using the stored private key
-        const dbUser = await db.user.findUnique({ where: { id: user.id } });
+        const dbUser = await db.user.findUnique({
+            where: {
+                id: user.id,
+            },
+        });
         if (!dbUser?.encrypted_private_key) {
             throw new Error(`User ${user.email} has no encrypted private key in the database`);
         }
@@ -99,8 +103,12 @@ export async function purchaseOrGetTicket(
 
         // Patch the stored signature so future re-runs are fully idempotent
         await db.ticket.update({
-            data: { signature: JSON.stringify(signed) },
-            where: { id: existingTicket.id },
+            data: {
+                signature: JSON.stringify(signed),
+            },
+            where: {
+                id: existingTicket.id,
+            },
         });
 
         return {
@@ -117,7 +125,9 @@ export async function purchaseOrGetTicket(
     const ticket = await db.$transaction(async (tx) => {
         // Verify capacity
         const currentSlot = await tx.eventSlot.findUnique({
-            where: { id: slot.slotId },
+            where: {
+                id: slot.slotId,
+            },
         });
         if (!currentSlot || currentSlot.capacity < 1) {
             throw new Error(`Slot ${slot.slotId} has no remaining capacity`);
@@ -151,28 +161,46 @@ export async function purchaseOrGetTicket(
 
         // 3. Decrement slot capacity
         await tx.eventSlot.update({
-            data: { capacity: { decrement: 1 } },
-            where: { id: slot.slotId },
+            data: {
+                capacity: {
+                    decrement: 1,
+                },
+            },
+            where: {
+                id: slot.slotId,
+            },
         });
 
         // 4. Decrement buyer's card balance (no-op when price = 0)
         if (totalAmount.gt(0)) {
             await tx.card.update({
-                data: { balance: { decrement: totalAmount } },
-                where: { id: card.cardId },
+                data: {
+                    balance: {
+                        decrement: totalAmount,
+                    },
+                },
+                where: {
+                    id: card.cardId,
+                },
             });
         }
 
         // 5. Ensure organiser wallet exists + credit it
         const organiserEvent = await tx.event.findUnique({
-            select: { organiserId: true },
-            where: { id: slot.eventId },
+            select: {
+                organiserId: true,
+            },
+            where: {
+                id: slot.eventId,
+            },
         });
 
         if (organiserEvent) {
             const organiserWallet =
                 (await tx.wallet.findUnique({
-                    where: { userId: organiserEvent.organiserId },
+                    where: {
+                        userId: organiserEvent.organiserId,
+                    },
                 })) ??
                 (await tx.wallet.create({
                     data: {
@@ -184,8 +212,14 @@ export async function purchaseOrGetTicket(
 
             if (totalAmount.gt(0)) {
                 await tx.wallet.update({
-                    data: { balance: { increment: totalAmount } },
-                    where: { id: organiserWallet.id },
+                    data: {
+                        balance: {
+                            increment: totalAmount,
+                        },
+                    },
+                    where: {
+                        id: organiserWallet.id,
+                    },
                 });
             }
 
@@ -220,7 +254,9 @@ export async function purchaseOrGetTicket(
             qr_code_data: `benchmark://ticket/${ticket.id}`,
             signature: JSON.stringify(signed),
         },
-        where: { id: ticket.id },
+        where: {
+            id: ticket.id,
+        },
     });
 
     return {
@@ -297,11 +333,20 @@ export async function purchaseBenchmarkTickets(
     slot: BenchmarkEventSlot,
     config: BenchmarkConfig,
     onProgress?: (completed: number, total: number) => void,
-): Promise<{ tickets: TicketRecord[]; failures: Array<{ email: string; reason: string }> }> {
+): Promise<{
+    tickets: TicketRecord[];
+    failures: Array<{
+        email: string;
+        reason: string;
+    }>;
+}> {
     const total = users.length;
     const batchSize = config.concurrency;
     const tickets: TicketRecord[] = [];
-    const failures: Array<{ email: string; reason: string }> = [];
+    const failures: Array<{
+        email: string;
+        reason: string;
+    }> = [];
 
     for (let i = 0; i < total; i += batchSize) {
         const batch = users.slice(i, i + batchSize);
@@ -337,5 +382,8 @@ export async function purchaseBenchmarkTickets(
         onProgress?.(Math.min(i + batchSize, total), total);
     }
 
-    return { failures, tickets };
+    return {
+        failures,
+        tickets,
+    };
 }
