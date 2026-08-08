@@ -1,293 +1,300 @@
-  generator client {
-    provider = "prisma-client-js"
-    //output   = "../src/generated/prisma"
-  }
+generator client {
+  provider = "prisma-client-js"
+  //output   = "../src/generated/prisma"
+}
 
-  datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-  }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-  enum Role {
-    user
-    verifier
-    organiser
-    admin
-  }
+enum Role {
+  user
+  verifier
+  organiser
+  admin
+}
 
-  enum OTPPurpose {
-    signup
-    forgot_password
-    ticket_validation
-  }
+enum OTPPurpose {
+  signup
+  forgot_password
+  ticket_validation
+}
 
-  enum EventStatus {
-    draft
-    published
-    cancelled
-  }
+enum EventStatus {
+  draft
+  published
+  cancelled
+}
 
-  enum EventCategory {
-    movie
-    concert
-    sports
-    theatre
-    comedy
-    conference
-    workshop
-    exhibition
-    festival
-    other
-  }
+enum EventCategory {
+  movie
+  concert
+  sports
+  theatre
+  comedy
+  conference
+  workshop
+  exhibition
+  festival
+  other
+}
 
-  enum EventGenre {
-    action
-    drama
-    comedy
-    romance
-    horror
-    thriller
-    sci_fi
-    fantasy
-    documentary
-    animation
-    classical
-    rock
-    pop
-    jazz
-    hip_hop
-    sports_general
-    other
-  }
+enum EventGenre {
+  action
+  drama
+  comedy
+  romance
+  horror
+  thriller
+  sci_fi
+  fantasy
+  documentary
+  animation
+  classical
+  rock
+  pop
+  jazz
+  hip_hop
+  sports_general
+  other
+}
 
-  enum EventLanguage {
-    english
-    hindi
-    marathi
-    spanish
-    french
-    german
-    japanese
-    korean
-    chinese
-    tamil
-    telugu
-    multi_language
-  }
+enum EventLanguage {
+  english
+  hindi
+  marathi
+  spanish
+  french
+  german
+  japanese
+  korean
+  chinese
+  tamil
+  telugu
+  multi_language
+}
 
-  enum TicketStatus {
-    ISSUED
-    CANCELLED
-    USED
-    EXPIRED
-  }
+enum TicketStatus {
+  ISSUED
+  CANCELLED
+  USED
+  EXPIRED
+}
 
-  enum TransactionType {
-    Initiate
-    DEPOSIT
-    WITHDRAWAL
-    PURCHASE
-    REFUND
-    CANCEL
-    PAYOUT
-  }
+enum TransactionType {
+  Initiate
+  DEPOSIT
+  WITHDRAWAL
+  PURCHASE
+  REFUND
+  CANCEL
+  PAYOUT
+}
 
-  enum BankName {
-    yesbank
-    bob
-    hdfc
-    icic
-    kotak
-  }
+enum BankName {
+  yesbank
+  bob
+  hdfc
+  icic
+  kotak
+}
 
-  enum Currency {
-    USD
-    EUR
-    INR
-  }
+enum Currency {
+  USD
+  EUR
+  INR
+}
 
-  enum WalletStatus {
-    active
-    suspended
-    closed
-  }
+enum WalletStatus {
+  active
+  suspended
+  closed
+}
 
-  model User {
-    id                    String          @id @default(uuid())
-    first_name            String
-    last_name             String
-    email                 String          @unique
-    password              String
-    role                  Role
-    is_verified           Boolean         @default(false)
-    profile_image_url     String?
-    public_key            String?
-    encrypted_private_key String?
-    city                  String?
-    state                 String?
-    DOB                   DateTime?
-    zip_code              String?
-    phone_number          String?         @unique
-    created_at            DateTime        @default(now())
-    otps                  Otp[]
-    passwordResets        PasswordResetToken[]
-    jwtTokens             JwtToken[]
-    organisedEvents       Event[]         @relation("OrganiserEvents")
-    tickets               Ticket[]
-    verifications         TicketVerification[] @relation("VerifierVerifications")
-    scannedTickets        Ticket[]        @relation("VerifierVerifications")
-    cards                 Card[]
-    transactions          Transaction[]
-    wallet                Wallet?
-    @@index([email,phone_number])
-  }
+model User {
+  id                    String               @id @default(uuid())
+  first_name            String
+  last_name             String
+  email                 String               @unique
+  password              String
+  role                  Role
+  is_verified           Boolean              @default(false)
+  profile_image_url     String?
+  public_key            String?
+  encrypted_private_key String?
+  city                  String?
+  state                 String?
+  DOB                   DateTime?
+  zip_code              String?
+  phone_number          String?              @unique
+  created_at            DateTime             @default(now())
+  otps                  Otp[]
+  passwordResets        PasswordResetToken[]
+  jwtTokens             JwtToken[]
+  organisedEvents       Event[]              @relation("OrganiserEvents")
+  tickets               Ticket[]
+  verifications         TicketVerification[] @relation("VerifierVerifications")
+  scannedTickets        Ticket[]             @relation("VerifierVerifications")
+  cards                 Card[]
+  transactions          Transaction[]
+  wallet                Wallet?
 
-  model Otp {
-    id         String       @id @default(uuid())
-    user       User         @relation(fields: [userId], references: [id])
-    userId     String
-    ticketId   String?
-    ticket     Ticket?      @relation(fields: [ticketId], references: [id])
-    ticketVerificationId String?
-    ticketVerification TicketVerification? @relation(fields: [ticketVerificationId], references: [id])
-    otp_code   String
-    purpose    OTPPurpose
-    is_used    Boolean      @default(false)
-    expires_at DateTime
-    created_at DateTime     @default(now())
-  }
+  @@index([email, phone_number])
+}
 
-  model PasswordResetToken {
-    id         String       @id @default(uuid())
-    user       User         @relation(fields: [userId], references: [id])
-    userId     String
-    token      String
-    expires_at DateTime
-    created_at DateTime     @default(now())
-    @@index([token])
-  }
+model Otp {
+  id                   String              @id @default(uuid())
+  user                 User                @relation(fields: [userId], references: [id])
+  userId               String
+  ticketId             String?
+  ticket               Ticket?             @relation(fields: [ticketId], references: [id])
+  ticketVerificationId String?
+  ticketVerification   TicketVerification? @relation(fields: [ticketVerificationId], references: [id])
+  otp_code             String
+  purpose              OTPPurpose
+  is_used              Boolean             @default(false)
+  expires_at           DateTime
+  created_at           DateTime            @default(now())
+}
 
-  model JwtToken {
-    id         String       @id @default(uuid())
-    user       User         @relation(fields: [userId], references: [id])
-    userId     String
-    token      String
-    issued_at  DateTime
-    expires_at DateTime
-    is_revoked Boolean      @default(false)
-    @@index([token])
-  }
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  token      String
+  expires_at DateTime
+  created_at DateTime @default(now())
 
-  model Event {
-    id             String        @id @default(uuid())
-    organiser      User          @relation("OrganiserEvents", fields: [organiserId], references: [id])
-    organiserId    String
-    title          String
-    description    String
-    banner_url     String?
-    hero_image_url String?
-    status         EventStatus   @default(draft)
-    category       EventCategory
-    genre          EventGenre?    
-    language       EventLanguage?
-    is_online      Boolean       @default(false)
-    created_at     DateTime      @default(now())
-    updated_at     DateTime      @updatedAt
-    slots          EventSlot[]
-    @@index([category])
-    @@index([status])
-  }
+  @@index([token])
+}
 
-  model EventSlot {
-    id         String     @id @default(uuid())
-    event      Event      @relation(fields: [eventId], references: [id])
-    eventId    String
-    event_date DateTime
-    start_time DateTime
-    end_time   DateTime
-    location_name  String
-    location_url   String?
-    capacity   Int
-    price      Decimal    @default(0.00) 
-    tickets    Ticket[]
-    created_at     DateTime      @default(now())
-    @@index([eventId])
-  }
+model JwtToken {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  token      String
+  issued_at  DateTime
+  expires_at DateTime
+  is_revoked Boolean  @default(false)
 
-  model Ticket {
-    id             String     @id @default(uuid())
-    eventSlot      EventSlot  @relation(fields: [eventSlotId], references: [id])
-    eventSlotId    String
-    user           User       @relation(fields: [userId], references: [id])
-    userId         String
-    qr_code_data   String
-    signature      String
-    status         TicketStatus @default(ISSUED)
-    issued_at      DateTime   @default(now())
-    is_valid       Boolean    @default(true)
-    is_verified    Boolean    @default(false)
-    scanned_at     DateTime?
-    scanned_by     User?      @relation("VerifierVerifications", fields: [scannedById], references: [id])
-    scannedById    String?
-    otp            Otp[]
-    verifications  TicketVerification[]
-    transactions   Transaction[]
-    @@index([eventSlotId])
-    @@index([userId])
-  }
+  @@index([token])
+}
 
-  model TicketVerification {
-    id                String   @id @default(uuid())
-    ticket            Ticket   @relation(fields: [ticketId], references: [id])
-    ticketId          String
-    verifier          User     @relation("VerifierVerifications", fields: [verifierId], references: [id])
-    verifierId        String
-    verification_time DateTime
-    is_successful     Boolean
-    remarks           String?
-    otp               Otp[]   
-  }
+model Event {
+  id             String         @id @default(uuid())
+  organiser      User           @relation("OrganiserEvents", fields: [organiserId], references: [id])
+  organiserId    String
+  title          String
+  description    String
+  banner_url     String?
+  hero_image_url String?
+  status         EventStatus    @default(draft)
+  category       EventCategory
+  genre          EventGenre?
+  language       EventLanguage?
+  is_online      Boolean        @default(false)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  slots          EventSlot[]
 
-  model Card {
-    id           String         @id @default(uuid())
-    user         User           @relation(fields: [userId], references: [id])
-    userId       String
-    bank_name    BankName
-    card_number  String         @unique
-    balance      Decimal        @default(0.00)
-    created_at   DateTime       @default(now())
-    transactions Transaction[]
-  }
+  @@index([category])
+  @@index([status])
+}
 
-  model Transaction {
-    id           String             @id @default(uuid())
-    user         User               @relation(fields: [userId], references: [id])
-    userId       String
-    card         Card               @relation(fields: [cardId], references: [id])
-    cardId       String
-    bank_name    BankName?          
-    ticket       Ticket?            @relation(fields: [ticketId], references: [id])
-    ticketId     String?
-    amount       Decimal
-    type         TransactionType
-    description  String?
-    ticket_count Int?
-    token        String?            @unique
-    created_at   DateTime           @default(now())
-    canceled_at  DateTime? 
-    wallet       Wallet?          @relation(fields: [walletId], references: [id])
-    walletId     String?
-  }
+model EventSlot {
+  id            String   @id @default(uuid())
+  event         Event    @relation(fields: [eventId], references: [id])
+  eventId       String
+  event_date    DateTime
+  start_time    DateTime
+  end_time      DateTime
+  location_name String
+  location_url  String?
+  capacity      Int
+  isDeleted     Boolean  @default(false)
+  price         Decimal  @default(0.00)
+  tickets       Ticket[]
+  created_at    DateTime @default(now())
 
-  model Wallet {
-    id           String    @id @default(uuid())
-    userId       String    @unique
-    user         User      @relation(fields: [userId], references: [id])
-    balance      Decimal   @default(0)
-    currency     Currency  @default(INR)
-    status       WalletStatus @default(active)
-    createdAt    DateTime  @default(now())
-    updatedAt    DateTime  @updatedAt
-    transactions Transaction[]
-    lastPayoutAt DateTime?
-  }
+  @@index([eventId])
+}
+
+model Ticket {
+  id            String               @id @default(uuid())
+  eventSlot     EventSlot            @relation(fields: [eventSlotId], references: [id])
+  eventSlotId   String
+  user          User                 @relation(fields: [userId], references: [id])
+  userId        String
+  qr_code_data  String
+  signature     String
+  status        TicketStatus         @default(ISSUED)
+  issued_at     DateTime             @default(now())
+  is_valid      Boolean              @default(true)
+  is_verified   Boolean              @default(false)
+  scanned_at    DateTime?
+  scanned_by    User?                @relation("VerifierVerifications", fields: [scannedById], references: [id])
+  scannedById   String?
+  otp           Otp[]
+  verifications TicketVerification[]
+  transactions  Transaction[]
+
+  @@index([eventSlotId])
+  @@index([userId])
+}
+
+model TicketVerification {
+  id                String   @id @default(uuid())
+  ticket            Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId          String
+  verifier          User     @relation("VerifierVerifications", fields: [verifierId], references: [id])
+  verifierId        String
+  verification_time DateTime
+  is_successful     Boolean
+  remarks           String?
+  otp               Otp[]
+}
+
+model Card {
+  id           String        @id @default(uuid())
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String
+  bank_name    BankName
+  card_number  String        @unique
+  balance      Decimal       @default(0.00)
+  created_at   DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model Transaction {
+  id           String          @id @default(uuid())
+  user         User            @relation(fields: [userId], references: [id])
+  userId       String
+  card         Card            @relation(fields: [cardId], references: [id])
+  cardId       String
+  bank_name    BankName?
+  ticket       Ticket?         @relation(fields: [ticketId], references: [id])
+  ticketId     String?
+  amount       Decimal
+  type         TransactionType
+  description  String?
+  ticket_count Int?
+  token        String?         @unique
+  created_at   DateTime        @default(now())
+  canceled_at  DateTime?
+  wallet       Wallet?         @relation(fields: [walletId], references: [id])
+  walletId     String?
+}
+
+model Wallet {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id])
+  balance      Decimal       @default(0)
+  currency     Currency      @default(INR)
+  status       WalletStatus  @default(active)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  lastPayoutAt DateTime?
+}

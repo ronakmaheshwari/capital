@@ -21,6 +21,7 @@ interface jobInterface {
 async function RedisStarter() {
     await initRedis();
 }
+
 RedisStarter();
 
 async function processJob() {

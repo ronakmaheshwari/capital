@@ -2040,4 +2040,166 @@ organiserRouter.get(
     },
 );
 
+organiserRouter.post("/:eventId/:slotId/cancel",organiserMiddleware, async (req: Request, res: Response) => {
+    try {
+        const organiserId = req.organiserId;
+        const {eventId, slotId} = req.params;
+        const now = new Date();
+
+        if(!eventId || !slotId) {
+            return res.status(404).json({
+                error: true,
+                message: "You must provide eventId and slotId"
+            })
+        }
+        const [checkEvent, checkSlot] = await Promise.all([
+            db.event.findFirst({
+                where: {
+                    id: eventId as string
+                }
+            }),
+            db.eventSlot.findFirst({
+                where: {
+                    id: slotId as string,
+                    eventId: eventId as string
+                }
+            })
+        ])
+
+        if(!checkEvent) {
+            return res.status(404).json({
+                message: "The given event doesnt exist with our systems",
+                error: true
+            })
+        }
+
+        if(!checkSlot) {
+            return res.status(404).json({
+                message: "The given event slot doesnt exist with our systems",
+                error: true
+            })
+        }
+
+        if(checkEvent.organiserId !== organiserId) {
+            return res.status(403).json({
+                error: true,
+                message: "This event doesnt belong to you"
+            })
+        }
+
+        if(checkEvent.status === "cancelled") {
+            return res.status(409).json({
+                error: true,
+                message: "The given event is already cancelled"
+            })
+        }
+
+        if(checkSlot.isDeleted === true) {
+            return res.status(401).json({
+                error: true,
+                message: "The given event slot is already deleted"
+            })
+        }
+
+        if (checkSlot.start_time <= now) {
+            return res.status(409).json({
+                error: true,
+                message:
+                    "The given event slot has already started and cannot be cancelled",
+            });
+        }
+
+        const ops = [];
+        const countPurchase = await db.transaction.findMany({
+            where: {
+                type: "PURCHASE",
+                ticket: {
+                    eventSlotId: checkSlot.id,
+                    status: "ISSUED",
+                    is_valid: true,
+                },
+            },
+            select: {
+                id: true,
+                amount: true,
+                cardId: true,
+                token: true,
+                ticketId: true,
+                userId: true,
+            },
+        });
+
+        const cancelledSlot = await db.$transaction(async (tx) => {
+            const updateSlot = await tx.eventSlot.updateMany({
+                where: {
+                    id: checkSlot.id,
+                    eventId: checkEvent.id,
+                    isDeleted: false,
+                },
+                data: {
+                    isDeleted: true,
+                },
+            });
+
+            if (updateSlot.count === 0) {
+                throw new Error("SLOT_ALREADY_CANCELLED");
+            }
+
+            const updateTickets = await tx.ticket.updateMany({
+                where: {
+                    eventSlotId: checkSlot.id,
+                    status: "ISSUED",
+                    is_valid: true,
+                },
+                data: {
+                    status: "CANCELLED",
+                    is_valid: false,
+                },
+            });
+
+            return {
+                updateSlot,
+                updateTickets,
+            };
+        });
+
+        if (countPurchase.length > 0) {
+                await Promise.all(
+                    countPurchase.map((purchase) =>
+                        redisCache.rPush(
+                            Queue_name,
+                            JSON.stringify({
+                                amount: purchase.amount.toString(),
+                                cardId: purchase.cardId,
+                                token: purchase.token,
+                                transactionId: purchase.id,
+                                ticketId: purchase.ticketId,
+                                type: "REFUND",
+                                userId: purchase.userId,
+                            }),
+                        ),
+                    ),
+                );
+        }
+
+        return res.status(202).json({
+                error: false,
+                success: true,
+                message:
+                    "The event slot was cancelled and refunds were queued for processing",
+                data: {
+                    eventId: checkEvent.id,
+                    slotId: checkSlot.id,
+                    refundsQueued: countPurchase.length,
+                },
+            });
+    } catch (error) {
+        console.error(error);
+            return res.status(500).json({
+                error: error instanceof Error ? error.message : error,
+                message: "Internal error occurred",
+        });
+    }
+})
+
 export default organiserRouter;
