@@ -121,37 +121,57 @@ export async function withdrawMoney(job: jobInterface) {
     try {
         const withdrawAmount = new Decimal(job.amount);
 
-        const _result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-            const card = await tx.card.update({
-                data: {
-                    balance: {
-                        decrement: withdrawAmount,
+        await db.$transaction(
+            async (tx: Prisma.TransactionClient) => {
+                const card = await tx.card.findUnique({
+                    where: {
+                        id: job.cardId,
                     },
-                },
-                where: {
-                    id: job.cardId,
-                },
-            });
+                    select: {
+                        id: true,
+                        balance: true,
+                    },
+                });
 
-            if (new Decimal(card.balance).lessThan(withdrawAmount)) {
-                throw new Error("Insufficient balance for withdrawal");
-            }
+                if (!card) {
+                    throw new Error("Card not found");
+                }
 
-            await tx.transaction.update({
-                data: {
-                    type: "WITHDRAWAL",
-                },
-                where: {
-                    id: job.transactionId,
-                },
-            });
+                const currentBalance = new Decimal(card.balance);
 
-            return {
-                message: "Withdraw successful",
-            };
-        });
+                if (currentBalance.lessThan(withdrawAmount)) {
+                    throw new Error("Insufficient balance for withdrawal");
+                }
+
+                await tx.card.update({
+                    where: {
+                        id: job.cardId,
+                    },
+                    data: {
+                        balance: {
+                            decrement: withdrawAmount,
+                        },
+                    },
+                });
+
+                await tx.transaction.update({
+                    where: {
+                        id: job.transactionId,
+                    },
+                    data: {
+                        type: "WITHDRAWAL",
+                    },
+                });
+            },
+        );
+
+        return {
+            message: "Withdraw successful",
+        };
     } catch (error) {
-        console.error("Internal error occured", error);
+        console.error("Internal error occurred during withdrawal:", error);
+
+        throw error;
     }
 }
 
@@ -202,102 +222,191 @@ export async function refundMoney(job: jobInterface) {
     try {
         const amount = new Decimal(job.amount);
         const originalTransaction = await db.transaction.findUnique({
+            where: {
+                id: job.transactionId,
+            },
             include: {
                 ticket: {
                     select: {
+                        id: true,
+                        ticket_count: true,
+                        status: true,
+                        is_valid: true,
                         eventSlot: {
                             select: {
+                                id: true,
                                 event: {
                                     select: {
                                         organiserId: true,
                                     },
                                 },
-                                id: true,
                             },
                         },
+                    },
+                },
+            },
+        });
+
+        if (!originalTransaction) {
+            throw new Error("Original transaction not found");
+        }
+
+        if (!originalTransaction.ticket) {
+            throw new Error("Original transaction ticket not found");
+        }
+
+        if (originalTransaction.type === "REFUND") {
+            throw new Error("Refund already processed");
+        }
+
+        if (originalTransaction.type !== "PURCHASE") {
+            throw new Error(
+                `Transaction cannot be refunded because its type is ${originalTransaction.type}`,
+            );
+        }
+
+        const organiserId =
+            originalTransaction.ticket.eventSlot.event.organiserId;
+
+        await db.$transaction(
+            async (tx: Prisma.TransactionClient) => {
+                const transaction = await tx.transaction.findUnique({
+                    where: {
+                        id: job.transactionId,
+                    },
+                    select: {
                         id: true,
+                        type: true,
+                        canceled_at: true,
+                        amount: true,
+                        cardId: true,
+                        ticket_count: true,
+                        ticket: {
+                            select: {
+                                id: true,
+                                eventSlotId: true,
+                            },
+                        },
                     },
-                },
+                });
+
+                if (!transaction) {
+                    throw new Error("Original transaction not found");
+                }
+
+                if (transaction.type === "REFUND") {
+                    throw new Error("Refund already processed");
+                }
+
+                if (transaction.type !== "PURCHASE") {
+                    throw new Error(
+                        `Transaction cannot be refunded because its type is ${transaction.type}`,
+                    );
+                }
+
+                if (!transaction.ticket) {
+                    throw new Error("Ticket no longer exists");
+                }
+
+                const organiserWallet = await tx.wallet.findUnique({
+                    where: {
+                        userId: organiserId,
+                    },
+                    select: {
+                        id: true,
+                        balance: true,
+                    },
+                });
+
+                if (!organiserWallet) {
+                    throw new Error("Organiser wallet not found");
+                }
+
+                const organiserBalance = new Decimal(
+                    organiserWallet.balance,
+                );
+
+                if (organiserBalance.lessThan(amount)) {
+                    throw new Error(
+                        "Organiser does not have enough balance to process refund",
+                    );
+                }
+
+                const card = await tx.card.findUnique({
+                    where: {
+                        id: job.cardId,
+                    },
+                    select: {
+                        id: true,
+                        balance: true,
+                    },
+                });
+
+                if (!card) {
+                    throw new Error("User card not found");
+                }
+
+                await tx.wallet.update({
+                    where: {
+                        id: organiserWallet.id,
+                    },
+                    data: {
+                        balance: {
+                            decrement: amount,
+                        },
+                    },
+                });
+
+                await tx.card.update({
+                    where: {
+                        id: job.cardId,
+                    },
+                    data: {
+                        balance: {
+                            increment: amount,
+                        },
+                    },
+                });
+
+                await tx.transaction.update({
+                    where: {
+                        id: transaction.id,
+                    },
+                    data: {
+                        canceled_at: new Date(),
+                        type: "REFUND",
+                    },
+                });
+
+                await tx.eventSlot.update({
+                    where: {
+                        id: transaction.ticket.eventSlotId,
+                    },
+                    data: {
+                        capacity: {
+                            increment: transaction.ticket_count,
+                        },
+                    },
+                });
+
+                await tx.ticket.delete({
+                    where: {
+                        id: transaction.ticket.id,
+                    },
+                });
             },
-            where: {
-                id: job.transactionId,
-            },
-        });
+        );
 
-        if (!originalTransaction || !originalTransaction.ticket) {
-            throw new Error("Original transaction or ticket not found");
-        }
-
-        const organiserId = originalTransaction.ticket.eventSlot.event.organiserId;
-        const organiserWallet = await db.wallet.findUnique({
-            where: {
-                userId: organiserId,
-            },
-        });
-
-        if (!organiserWallet) {
-            throw new Error("Organiser wallet not found");
-        }
-
-        if (new Decimal(organiserWallet.balance).lessThan(amount)) {
-            throw new Error("Organiser does not have enough balance to process refund");
-        }
-
-        await db.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.wallet.update({
-                data: {
-                    balance: {
-                        decrement: amount,
-                    },
-                },
-                where: {
-                    id: organiserWallet.id,
-                },
-            });
-
-            await tx.card.update({
-                data: {
-                    balance: {
-                        increment: amount,
-                    },
-                },
-                where: {
-                    id: job.cardId,
-                },
-            });
-
-            await tx.transaction.update({
-                data: {
-                    canceled_at: new Date(),
-                    type: "REFUND",
-                },
-                where: {
-                    id: job.transactionId,
-                },
-            });
-
-            await tx.eventSlot.update({
-                data: {
-                    capacity: {
-                        increment: originalTransaction.ticket_count,
-                    },
-                },
-                where: {
-                    id: originalTransaction.ticket.eventSlot.id,
-                },
-            });
-
-            await tx.ticket.delete({
-                where: {
-                    id: originalTransaction.ticket.id,
-                },
-            });
-        });
         return {
             message: "Refund successful",
         };
     } catch (error) {
-        console.error("Internal error occurred during refund:", error);
+        console.error(
+            "Internal error occurred during refund:",
+            error,
+        );
+
+        throw error;
     }
 }
 

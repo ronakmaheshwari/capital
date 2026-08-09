@@ -1,0 +1,51 @@
+{
+  "name": "benchmark-cancellation-refund",
+  "version": "1.0.0",
+  "description": "IEEE Access reproducible benchmark suite for ticket cancellation and refund workflows",
+  "type": "commonjs",
+  "scripts": {
+    "preflight": "ts-node scripts/preflight.ts",
+    "seed:cancel": "BENCHMARK_MODE=true ts-node seeders/seed-cancellation.ts",
+    "seed:cancel:cases": "BENCHMARK_MODE=true ts-node seeders/seed-cancellation-cases.ts",
+    "seed:refund": "BENCHMARK_MODE=true ts-node seeders/seed-refund.ts",
+    "reset": "BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts",
+    "verify:cancel": "BENCHMARK_MODE=true ts-node verification/verify-cancellation.ts",
+    "verify:refund": "BENCHMARK_MODE=true ts-node verification/verify-refund.ts",
+    "verify:ticket": "BENCHMARK_MODE=true ts-node verification/verify-ticket.ts",
+    "verify:wallet": "BENCHMARK_MODE=true ts-node verification/verify-wallet.ts",
+    "verify:card": "BENCHMARK_MODE=true ts-node verification/verify-card.ts",
+    "verify:redis": "BENCHMARK_MODE=true ts-node verification/verify-redis.ts",
+    "aggregate": "ts-node instrumentation/aggregate-results.ts",
+    "benchmark:cancel:seed": "npm run seed:cancel",
+    "benchmark:cancel:correctness": "bash scripts/run-correctness.sh cancel",
+    "benchmark:cancel:performance": "bash scripts/run-cancellation.sh",
+    "benchmark:refund:seed": "npm run seed:refund",
+    "benchmark:refund:correctness": "bash scripts/run-correctness.sh refund",
+    "benchmark:refund:http": "bash scripts/run-refund.sh http",
+    "benchmark:refund:e2e": "bash scripts/run-refund.sh e2e",
+    "benchmark:cancel": "bash scripts/run-cancellation.sh",
+    "benchmark:refund": "bash scripts/run-refund.sh",
+    "benchmark:all": "bash scripts/run-all.sh"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^16.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.0",
+    "redis": "^4.7.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/uuid": "^9.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
+  }
+}

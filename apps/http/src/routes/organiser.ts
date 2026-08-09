@@ -2040,7 +2040,7 @@ organiserRouter.get(
     },
 );
 
-organiserRouter.post("/:eventId/:slotId/cancel",organiserMiddleware, async (req: Request, res: Response) => {
+organiserRouter.patch("/:eventId/:slotId/cancel",organiserMiddleware, async (req: Request, res: Response) => {
     try {
         const organiserId = req.organiserId;
         const {eventId, slotId} = req.params;

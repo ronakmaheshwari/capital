@@ -1,0 +1,160 @@
+Great questions. Let me break this down clearly.
+
+---
+
+## ⏱️ Time Estimates Per Test (5 Runs)
+
+| Test | What it does | Time per run | 5 runs total |
+|------|-------------|-------------|-------------|
+| **Cancellation correctness** | 4 correctness cases (valid/duplicate/started/wrong-org) | ~30–60s | ~3–5 min |
+| **Cancellation perf: 10 tickets** | Seed 10 tickets → 1 cancel → verify → reset | ~25s | ~2 min |
+| **Cancellation perf: 50 tickets** | Seed 50 → cancel → verify → reset | ~35s | ~3 min |
+| **Cancellation perf: 100 tickets** | Seed 100 → cancel → verify → reset | ~45s | ~4 min |
+| **Cancellation perf: 500 tickets** | Seed 500 → cancel → verify → reset | ~2 min | ~10 min |
+| **Cancellation perf: 1000 tickets** | Seed 1000 → cancel → verify → reset | ~4 min | ~20 min |
+| **Refund correctness** | 1 refund → wait for worker → check duplicate | ~1–2 min | ~8 min |
+| **Refund HTTP benchmark** | POST /refund → measure HTTP latency only | ~20s | ~2 min |
+| **Refund E2E benchmark** | POST /refund → poll until worker finishes | ~45s | ~4 min |
+
+**Grand total if done one at a time:** ~55–60 minutes (your system handles one at a time with breaks between)
+
+---
+
+## 📋 What Each Test Actually Does
+
+### Cancellation Tests
+
+**`cancellation-correctness`** — Correctness only (not latency). Runs 4 cases:
+1. Cancel a valid future slot → expects **202 + tickets marked CANCELLED**
+2. Cancel the same slot twice → first **202**, second **401** — proves no duplicate refund jobs
+3. Try to cancel a slot that already started → expects **409**, nothing changes in DB
+4. Organiser B tries to cancel Organiser A's event → expects **403**, nothing changes
+
+**`cancellation-benchmark`** — Latency measurement. For each ticket count (10 / 50 / 100 / 500 / 1000):
+- Seeds N tickets as ISSUED + N PURCHASE transactions
+- Fires `PATCH /organiser/{eventId}/{slotId}/cancel` with real JWT
+- Records HTTP latency, reads `refundsQueued` from response
+- Runs post-run DB verification (slot.isDeleted, tickets all CANCELLED)
+
+### Refund Tests
+
+**`refund-correctness`** — Sends the same token twice to `POST /refund`. After the worker finishes the first one, the second must return **400 "Refund already processed"**. Confirms card is only credited once.
+
+**`refund-http-benchmark`** — Measures only the synchronous part: POST /refund → Redis RPUSH → HTTP 201. This is the pure API latency.
+
+**`refund-e2e-benchmark`** — Sends `POST /refund`, then polls the endpoint until the worker changes `transaction.type` to `REFUND` (worker has finished). Measures total time from HTTP call to worker completion.
+
+---
+
+## 🏃 Running Each Test 5 Times Separately
+
+Here are the exact commands for each test individually. Run each group when you're ready:
+
+### 1 — Cancellation Correctness (once is enough, not 5×)
+```bash
+cd benchmarks/cancellation-refund
+BENCHMARK_MODE=true npm run seed:cancel:cases
+k6 run --env BASE_URL=http://localhost:3001/api/v1 k6/cancellation/cancellation-correctness.js
+BENCHMARK_MODE=true npm run reset
+```
+
+---
+
+### 2 — Cancellation Performance: 10 tickets (5 runs)
+```bash
+cd benchmarks/cancellation-refund
+
+for i in 1 2 3 4 5; do
+  echo "=== Run $i/5 ===" 
+  BENCHMARK_MODE=true TICKET_COUNT=10 npm run seed:cancel
+  k6 run --env BASE_URL=http://localhost:3001/api/v1 \
+    --out json=results/raw/cancellation/10-tickets-run-0${i}.json \
+    k6/cancellation/cancellation-benchmark.js
+  BENCHMARK_MODE=true npm run verify:cancel
+  BENCHMARK_MODE=true npm run reset
+  sleep 2
+done
+```
+
+Repeat with `TICKET_COUNT=50`, `TICKET_COUNT=100`, `TICKET_COUNT=500`, `TICKET_COUNT=1000`.
+
+---
+
+### 3 — Refund Correctness (run 5 times)
+```bash
+for i in 1 2 3 4 5; do
+  echo "=== Run $i/5 ==="
+  BENCHMARK_MODE=true npm run seed:refund
+  k6 run --env WEBHOOK_URL=http://localhost:3002/api/v1/webhook \
+    k6/refund/refund-correctness.js
+  BENCHMARK_MODE=true npm run verify:refund
+  BENCHMARK_MODE=true npm run verify:card
+  BENCHMARK_MODE=true npm run verify:wallet
+  BENCHMARK_MODE=true npm run reset
+  sleep 2
+done
+```
+
+---
+
+### 4 — Refund HTTP Benchmark (5 runs)
+```bash
+mkdir -p results/raw/refund
+for i in 1 2 3 4 5; do
+  echo "=== Run $i/5 ==="
+  BENCHMARK_MODE=true npm run seed:refund
+  k6 run --env WEBHOOK_URL=http://localhost:3002/api/v1/webhook \
+    --out json=results/raw/refund/http-run-0${i}.json \
+    k6/refund/refund-http-benchmark.js
+  BENCHMARK_MODE=true npm run reset
+  sleep 2
+done
+```
+
+---
+
+### 5 — Refund E2E Benchmark (5 runs)
+```bash
+mkdir -p results/raw/refund
+for i in 1 2 3 4 5; do
+  echo "=== Run $i/5 ==="
+  BENCHMARK_MODE=true npm run seed:refund
+  k6 run \
+    --env WEBHOOK_URL=http://localhost:3002/api/v1/webhook \
+    --env POLL_INTERVAL_MS=200 \
+    --env POLL_TIMEOUT_MS=30000 \
+    --out json=results/raw/refund/e2e-run-0${i}.json \
+    k6/refund/refund-e2e-benchmark.js
+  BENCHMARK_MODE=true npm run verify:refund
+  BENCHMARK_MODE=true npm run verify:ticket
+  BENCHMARK_MODE=true npm run verify:card
+  BENCHMARK_MODE=true npm run verify:wallet
+  BENCHMARK_MODE=true npm run reset
+  sleep 2
+done
+```
+
+---
+
+### 6 — Generate the Final Report (after all runs)
+```bash
+BENCHMARK_MODE=true npm run aggregate
+```
+
+This reads all the JSON files in `results/raw/` and writes:
+- `results/reports/cancellation-report.json`
+- `results/reports/refund-report.json`
+- `results/processed/cancellation-summary.csv`
+- `results/processed/refund-summary.csv`
+
+---
+
+**Suggested order with breaks** so your system never has two heavy things at once:
+1. Correctness tests (light) → break
+2. Cancellation 10/50/100 tickets → break
+3. Cancellation 500 tickets → break  
+4. Cancellation 1000 tickets → break (longest seeder)
+5. Refund correctness → break
+6. Refund HTTP × 5 → break
+7. Refund E2E × 5 → break
+8. `npm run aggregate`
