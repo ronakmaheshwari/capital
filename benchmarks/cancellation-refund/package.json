@@ -43,7 +43,7 @@
     "@types/pg": "^8.11.0",
     "@types/uuid": "^9.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   },
   "allowScripts": {
     "bcrypt@6.0.0": true

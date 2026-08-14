@@ -45,7 +45,7 @@ async function run() {
     // Event
     const { id: eventId } = await createEvent(pool, { organiserId });
     const { id: slotId } = await createEventSlot(pool, { 
-      eventId, capacity: ticketCount + 10, price: pricePerTicket, hoursFromNow: 72 
+      eventId, capacity: ticketCount, price: pricePerTicket, hoursFromNow: 72 
     });
     
     const ticketIds: string[] = [];

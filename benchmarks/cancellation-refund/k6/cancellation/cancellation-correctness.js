@@ -46,17 +46,36 @@ export function case1Valid() {
 }
 
 export function case2Duplicate() {
-  const c = cases.alreadyCancelled;
-  const url = `${BASE_URL}/organiser/${c.eventId}/${c.slotId}/cancel`;
-  const headers = { Authorization: `Bearer ${c.organiserToken}` };
-  // First cancellation
-  const res1 = http.patch(url, null, { headers });
-  assert(res1.status === 202, `Case2 first cancel: expect 202, got ${res1.status}`);
-  sleep(0.5);
-  // Second cancellation (already deleted)
-  const res2 = http.patch(url, null, { headers });
-  assert(res2.status === 401, `Case2 second cancel (already deleted): expect 401, got ${res2.status}`);
-  console.log(`Case2 duplicate cancellation: first=${res1.status}, second=${res2.status}`);
+    const c = cases.duplicateCancellation;
+
+    const url =
+        `${BASE_URL}/organiser/${c.eventId}/${c.slotId}/cancel`;
+
+    const headers = {
+        Authorization: `Bearer ${c.organiserToken}`,
+    };
+
+    const res1 = http.patch(url, null, {
+        headers,
+    });
+
+    assert(
+        res1.status === 202,
+        `Case2 first cancel: expect 202, got ${res1.status}`,
+    );
+
+    const res2 = http.patch(url, null, {
+        headers,
+    });
+
+    assert(
+        res2.status === 401,
+        `Case2 second cancel: expect 401, got ${res2.status}`,
+    );
+
+    console.log(
+        `Case2 duplicate cancellation: first=${res1.status}, second=${res2.status}`,
+    );
 }
 
 export function case3Started() {

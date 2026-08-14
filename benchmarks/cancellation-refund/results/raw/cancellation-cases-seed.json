@@ -1,0 +1,39 @@
+{
+  "validFuture": {
+    "organiserId": "8f2d7115-b4e4-48dd-8419-7670883deacb",
+    "organiserToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6IjhmMmQ3MTE1LWI0ZTQtNDhkZC04NDE5LTc2NzA4ODNkZWFjYiIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjI3NTIsImV4cCI6MTgxNzc5ODc1Mn0.Y07LI7zZeScXJvoV9E-THPzz9735P78Gs_cosu-z_Vo",
+    "eventId": "adccf211-8c8f-4fe8-bf88-773acb9b82d4",
+    "slotId": "120297ea-d35c-4b99-8878-b5494c9cb1de",
+    "ticketCount": 5,
+    "customerId": "8133e881-6c2b-44d0-bfe2-05149df8e425",
+    "cardId": "a2e71ec0-599f-44f7-8d31-12ea0998ce3f",
+    "walletId": "f5c47203-515a-485f-a49c-7c4dcc61ed38"
+  },
+  "duplicateCancellation": {
+    "organiserId": "b812a068-a984-45b7-98b1-3c9331a50aaa",
+    "organiserToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6ImI4MTJhMDY4LWE5ODQtNDViNy05OGIxLTNjOTMzMWE1MGFhYSIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjI3NTIsImV4cCI6MTgxNzc5ODc1Mn0.PcDvmuNGwPiyg1J8SeWU5jbk9N4LkfHavOwg9D6fnqk",
+    "eventId": "f3603c77-afdd-48c0-9b5e-d47f9cca208f",
+    "slotId": "1ae9cb18-c10b-4a9f-9fcf-d06715f7a9d5",
+    "ticketCount": 5,
+    "customerId": "0b7b7ae5-0b19-408b-b642-aff995d04b45",
+    "cardId": "a0cb0749-7455-473c-90fb-a180ae40b47f",
+    "walletId": "5bd4cbe8-28de-4ff4-8a34-6ccc8f1fcbd1"
+  },
+  "alreadyStarted": {
+    "organiserId": "3c1da2de-c1d8-462a-926a-d21365c1a315",
+    "organiserToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6IjNjMWRhMmRlLWMxZDgtNDYyYS05MjZhLWQyMTM2NWMxYTMxNSIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjI3NTMsImV4cCI6MTgxNzc5ODc1M30.Pwwr2k_QYfEycFJjRijdB6aKsIXQb8UQ6nxWI2YVgG8",
+    "eventId": "7538ba11-0740-4385-bf58-80551d20e9a3",
+    "slotId": "865dc0e8-821b-4dbe-a1c8-02bcf21f06a9",
+    "ticketCount": 3
+  },
+  "wrongOrganiser": {
+    "correctOrganiserId": "1628faf8-634c-4a8d-9284-8362423fddbd",
+    "correctToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6IjE2MjhmYWY4LTYzNGMtNGE4ZC05Mjg0LTgzNjI0MjNmZGRiZCIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjI3NTMsImV4cCI6MTgxNzc5ODc1M30.wgWKwZqz_NyfBpksmedQ45tX-y_1IoI7PMukilE3xmc",
+    "wrongOrganiserId": "c5373342-25ab-4499-abaf-e1ddfcba8d20",
+    "wrongToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6ImM1MzczMzQyLTI1YWItNDQ5OS1hYmFmLWUxZGRmY2JhOGQyMCIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjI3NTMsImV4cCI6MTgxNzc5ODc1M30.S84iY-olQnzXvHzAtw6U06DZg3W38yJ0ehqKxRFEUQY",
+    "eventId": "1b3de496-41d1-4cc5-ade0-6f3be662e457",
+    "slotId": "a3f4d849-aaa8-4b96-8591-c07c905c1d65",
+    "ticketCount": 3
+  },
+  "createdAt": "2026-08-09T08:05:53.668Z"
+}

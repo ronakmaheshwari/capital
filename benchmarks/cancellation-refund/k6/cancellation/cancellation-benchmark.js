@@ -1,66 +1,148 @@
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-import { Trend, Counter, Rate } from 'k6/metrics';
-import { BASE_URL, POLL_INTERVAL_MS } from '../shared/config.js';
+import http from "k6/http";
+import { check } from "k6";
+import { Trend, Counter } from "k6/metrics";
 
-// Metrics
-const cancellationLatency = new Trend('cancellation_latency', true);
-const cancellationSuccess = new Counter('cancellation_success');
-const cancellationFailure = new Counter('cancellation_failure');
-const refundJobsQueued = new Trend('refund_jobs_queued');
+import { BASE_URL } from "../shared/config.js";
 
-// Read seed data at init time
-const seedData = JSON.parse(open('../../results/raw/cancellation-seed.json'));
+const cancellationLatency = new Trend(
+    "cancellation_latency",
+    true,
+);
+
+const cancellationSuccess = new Counter(
+    "cancellation_success",
+);
+
+const cancellationFailure = new Counter(
+    "cancellation_failure",
+);
+
+const refundJobsQueued = new Trend(
+    "refund_jobs_queued",
+);
+
+const seedData = JSON.parse(
+    open("../../results/raw/cancellation-seed.json"),
+);
 
 export const options = {
-  vus: 1,
-  iterations: 1,  // Single cancellation
-  thresholds: {
-    cancellation_latency: ['p(95)<10000'],
-    http_req_failed: ['rate<0.05'],
-  },
+    vus: 1,
+    iterations: 1,
+
+    thresholds: {
+        cancellation_latency: ["p(95)<10000"],
+        http_req_failed: ["rate<0.05"],
+        cancellation_success: ["count==1"],
+        cancellation_failure: ["count==0"],
+    },
 };
 
-export default function() {
-  const { organiserId, eventId, slotId, organiserToken, ticketCount } = seedData;
-  const url = `${BASE_URL}/organiser/${eventId}/${slotId}/cancel`;
-  const headers = { 'Authorization': `Bearer ${organiserToken}`, 'Content-Type': 'application/json' };
+export default function () {
+    const {
+        eventId,
+        slotId,
+        organiserToken,
+        ticketCount,
+    } = seedData;
 
-  const startTime = Date.now();
-  const res = http.patch(url, null, { headers });
-  const endTime = Date.now();
-  const latencyMs = endTime - startTime;
+    if (!eventId) {
+        throw new Error("Missing eventId in cancellation seed");
+    }
 
-  cancellationLatency.add(latencyMs);
+    if (!slotId) {
+        throw new Error("Missing slotId in cancellation seed");
+    }
 
-  const passed = check(res, {
-    'status is 202': (r) => r.status === 202,
-    'success flag is true': (r) => { try { return JSON.parse(r.body).success === true; } catch { return false; } },
-    'refundsQueued field present': (r) => { try { return JSON.parse(r.body).data.refundsQueued !== undefined; } catch { return false; } },
-  });
+    if (!organiserToken) {
+        throw new Error("Missing organiserToken in cancellation seed");
+    }
 
-  if (res.status === 202) {
-    cancellationSuccess.add(1);
+    if (!ticketCount) {
+        throw new Error("Missing ticketCount in cancellation seed");
+    }
+
+    const url =
+        `${BASE_URL}/organiser/${eventId}/${slotId}/cancel`;
+
+    const headers = {
+        Authorization: `Bearer ${organiserToken}`,
+        "Content-Type": "application/json",
+    };
+
+    console.log(`POST/PATCH URL: ${url}`);
+    console.log(`Expected tickets: ${ticketCount}`);
+
+    const startTime = Date.now();
+
+    const response = http.patch(
+        url,
+        null,
+        {
+            headers,
+        },
+    );
+
+    const latencyMs = Date.now() - startTime;
+
+    cancellationLatency.add(latencyMs);
+
+    let body = null;
+
     try {
-      const body = JSON.parse(res.body);
-      if (body.data && body.data.refundsQueued !== undefined) {
-        refundJobsQueued.add(body.data.refundsQueued);
-        console.log(`Cancellation successful. refundsQueued=${body.data.refundsQueued}, latency=${latencyMs}ms`);
-      }
-    } catch(e) {}
-  } else {
-    cancellationFailure.add(1);
-    console.error(`Cancellation failed: status=${res.status}, body=${res.body}`);
-  }
+        body = JSON.parse(response.body);
+    } catch {
+        console.error(
+            `Unable to parse response body: ${response.body}`,
+        );
+    }
 
-  // Output machine-readable result
-  console.log(JSON.stringify({
-    eventType: 'cancellation_result',
-    eventId,
-    slotId,
-    status: res.status,
-    latencyMs,
-    refundsQueued: (() => { try { return JSON.parse(res.body).data?.refundsQueued; } catch { return null; } })(),
-    timestamp: new Date().toISOString(),
-  }));
+    const checksPassed = check(response, {
+        "status is 202": (r) => r.status === 202,
+
+        "success flag is true": () =>
+            body?.success === true,
+
+        "refundsQueued field present": () =>
+            body?.data?.refundsQueued !== undefined,
+
+        "all tickets queued for refund": () =>
+            body?.data?.refundsQueued === ticketCount,
+    });
+
+    if (response.status === 202 && checksPassed) {
+        cancellationSuccess.add(1);
+
+        const queued =
+            body?.data?.refundsQueued ?? 0;
+
+        refundJobsQueued.add(queued);
+
+        console.log(
+            `Cancellation successful: ` +
+            `refundsQueued=${queued}, ` +
+            `latency=${latencyMs}ms`,
+        );
+    } else {
+        cancellationFailure.add(1);
+
+        console.error(
+            `Cancellation failed: ` +
+            `status=${response.status}, ` +
+            `body=${response.body}`,
+        );
+    }
+
+    console.log(
+        JSON.stringify({
+            eventType: "cancellation_result",
+            eventId,
+            slotId,
+            status: response.status,
+            latencyMs,
+            refundsQueued:
+                body?.data?.refundsQueued ?? null,
+            expectedRefunds: ticketCount,
+            timestamp: new Date().toISOString(),
+        }),
+    );
 }

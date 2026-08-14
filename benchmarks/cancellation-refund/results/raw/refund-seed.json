@@ -1,0 +1,29 @@
+{
+  "organiserId": "d7937d6f-a552-4cd3-852e-2cea7b2e21ef",
+  "organiserToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdhbmlzZXJJZCI6ImQ3OTM3ZDZmLWE1NTItNGNkMy04NTJlLTJjZWE3YjJlMjFlZiIsInJvbGUiOiJvcmdhbmlzZXIiLCJpYXQiOjE3ODYyNjg3OTIsImV4cCI6MTgxNzgwNDc5Mn0.kMnoP93JCsWnRu5plE2S8h5KLq18xom0xVIiLudfRe4",
+  "customerId": "8e406066-fc2c-4de1-a5ad-f98b7fbaff94",
+  "cardId": "efced95a-3003-4546-adaa-0bcbb8aba93f",
+  "cardBalanceBefore": 200,
+  "walletId": "2e8a4d41-296d-4e6b-ad84-a0e0c36b1f64",
+  "walletBalanceBefore": 200,
+  "eventId": "05385a55-a4d5-4db9-8281-fe8a54e5e13a",
+  "slotId": "c7c11f25-75d1-49cb-b805-9f9d19a75be4",
+  "eventSlotId": "c7c11f25-75d1-49cb-b805-9f9d19a75be4",
+  "slotCapacityBefore": 1,
+  "ticketCount": 1,
+  "ticketIds": [
+    "54ef4d21-7709-4549-91a1-a398507ee6ca"
+  ],
+  "ticketId": "54ef4d21-7709-4549-91a1-a398507ee6ca",
+  "purchaseTokens": [
+    "BMMSLMBHPOLPZW"
+  ],
+  "token": "BMMSLMBHPOLPZW",
+  "transactionIds": [
+    "8741dd7a-73b6-4da7-a28b-27294e104fe8"
+  ],
+  "transactionId": "8741dd7a-73b6-4da7-a28b-27294e104fe8",
+  "refundAmount": 100,
+  "pricePerTicket": 100,
+  "createdAt": "2026-08-09T09:46:32.952Z"
+}

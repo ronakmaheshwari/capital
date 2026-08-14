@@ -1,0 +1,70 @@
+
+…/benchmarks/cancellation-refund main  ? ❯ k6 run --env BASE_URL=http://localhost:3001/api/v1 k6/cancellation/cancellation-correctness.js
+
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/cancellation/cancellation-correctness.js
+        output: -
+
+     scenarios: (100.00%) 4 scenarios, 4 max VUs, 10m36s max duration (incl. graceful stop):
+              * case1_valid: 1 iterations shared among 1 VUs (maxDuration: 10m0s, exec: case1Valid, gracefulStop: 30s)
+              * case2_duplicate: 1 iterations shared among 1 VUs (maxDuration: 10m0s, exec: case2Duplicate, startTime: 2s, gracefulStop: 30s)
+              * case3_started: 1 iterations shared among 1 VUs (maxDuration: 10m0s, exec: case3Started, startTime: 4s, gracefulStop: 30s)
+              * case4_wrong_org: 1 iterations shared among 1 VUs (maxDuration: 10m0s, exec: case4WrongOrg, startTime: 6s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: Case1 valid future: expect 202, got 202  source=console
+INFO[0000] ✓ PASS: Case1: response.success === true      source=console
+INFO[0000] ✓ PASS: Case1: refundsQueued (5) === ticketCount (5)  source=console
+INFO[0000] Case1 valid future cancellation: status=202   source=console
+INFO[0002] ✓ PASS: Case2 first cancel: expect 202, got 202  source=console
+INFO[0002] ✓ PASS: Case2 second cancel: expect 401, got 401  source=console
+INFO[0002] Case2 duplicate cancellation: first=202, second=401  source=console
+INFO[0004] ✓ PASS: Case3 already started: expect 409, got 409  source=console
+INFO[0004] Case3 already started: status=409             source=console
+INFO[0006] ✓ PASS: Case4 wrong organiser: expect 403, got 403  source=console
+INFO[0006] Case4 wrong organiser: status=403             source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 7      1.163803/s
+
+    HTTP
+    http_req_duration..............: avg=45.08ms min=10.63ms med=12.88ms max=154.81ms p(90)=107.02ms p(95)=130.91ms
+      { expected_response:true }...: avg=95.07ms min=35.32ms med=95.07ms max=154.81ms p(90)=142.86ms p(95)=148.84ms
+    http_req_failed................: 60.00% 3 out of 5
+    http_reqs......................: 5      0.831288/s
+
+    EXECUTION
+    iteration_duration.............: avg=60.25ms min=11.54ms med=31.63ms max=166.21ms p(90)=131.18ms p(95)=148.7ms
+    iterations.....................: 4      0.66503/s
+    vus............................: 0      min=0      max=0
+    vus_max........................: 4      min=4      max=4
+
+    NETWORK
+    data_received..................: 2.1 kB 342 B/s
+    data_sent......................: 2.2 kB 362 B/s
+
+
+
+
+running (00m06.0s), 0/4 VUs, 4 complete and 0 interrupted iterations
+case1_valid     ✓ [======================================] 1 VUs  00m00.2s/10m0s  1/1 shared iters
+case2_duplicate ✓ [======================================] 1 VUs  00m00.0s/10m0s  1/1 shared iters
+case3_started   ✓ [======================================] 1 VUs  00m00.0s/10m0s  1/1 shared iters
+case4_wrong_org ✓ [======================================] 1 VUs  00m00.0s/10m0s  1/1 shared iters

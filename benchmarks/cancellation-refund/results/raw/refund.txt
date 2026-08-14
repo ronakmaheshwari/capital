@@ -1,0 +1,496 @@
+…/benchmarks/cancellation-refund main  ? ❯ for i in 1 2 3 4 5; do
+  echo "=== Run $i/5 ==="
+  BENCHMARK_MODE=true npm run seed:refund
+  k6 run --env WEBHOOK_URL=http://localhost:3002/api/v1/webhook \
+    k6/refund/refund-correctness.js
+  BENCHMARK_MODE=true npm run verify:refund
+  BENCHMARK_MODE=true npm run verify:card
+  BENCHMARK_MODE=true npm run verify:wallet
+  BENCHMARK_MODE=true npm run reset
+  sleep 2
+done
+=== Run 1/5 ===
+
+> benchmark-cancellation-refund@1.0.0 seed:refund
+> BENCHMARK_MODE=true ts-node seeders/seed-refund.ts
+
+Refund seed written to results/raw/refund-seed.json
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/refund/refund-correctness.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: First refund request returns 201 (got 201)  source=console
+INFO[0000] First refund: status=201                      source=console
+INFO[0000] ✓ PASS: Worker processed first refund within timeout  source=console
+INFO[0000] ✓ PASS: Second refund request returns 400 (got 400)  source=console
+INFO[0000] ✓ PASS: Second refund message is 'Refund already processed'  source=console
+INFO[0000] Second refund (duplicate): status=400         source=console
+INFO[0000] Duplicate processing test complete. Verify financial state using verify-card.ts, verify-wallet.ts, verify-ticket.ts  source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+    correctness_pass
+    ✓ 'count>0' count=4
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 4      4.553853/s
+
+    HTTP
+    http_req_duration..............: avg=53.99ms  min=5.27ms   med=6.51ms   max=245.52ms p(90)=149.99ms p(95)=197.76ms
+      { expected_response:true }...: avg=85.77ms  min=5.27ms   med=6.51ms   max=245.52ms p(90)=197.72ms p(95)=221.62ms
+    http_req_failed................: 40.00% 2 out of 5
+    http_reqs......................: 5      5.692316/s
+
+    EXECUTION
+    iteration_duration.............: avg=878.17ms min=878.17ms med=878.17ms max=878.17ms p(90)=878.17ms p(95)=878.17ms
+    iterations.....................: 1      1.138463/s
+
+    NETWORK
+    data_received..................: 1.6 kB 1.8 kB/s
+    data_sent......................: 910 B  1.0 kB/s
+
+
+
+
+running (00m00.9s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  00m00.9s/10m0s  1/1 shared iters
+
+> benchmark-cancellation-refund@1.0.0 verify:refund
+> BENCHMARK_MODE=true ts-node verification/verify-refund.ts
+
+✓ Transaction is REFUND and canceled_at is set
+✓ Ticket was successfully deleted
+✗ EventSlot capacity is 11, expected 10.
+
+> benchmark-cancellation-refund@1.0.0 verify:card
+> BENCHMARK_MODE=true ts-node verification/verify-card.ts
+
+✗ User card undefined not found.
+
+> benchmark-cancellation-refund@1.0.0 verify:wallet
+> BENCHMARK_MODE=true ts-node verification/verify-wallet.ts
+
+Current Organiser Wallet Balance: 9900.000000000000000000000000000000
+✓ Wallet balance is non-negative
+
+> benchmark-cancellation-refund@1.0.0 reset
+> BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts
+
+Deleted 1 Transactions
+Deleted 0 TicketVerifications
+Deleted 0 Otps
+Deleted 0 Tickets
+Deleted 1 EventSlots
+Deleted 1 Events
+Deleted 1 JwtTokens
+Deleted 1 Wallets
+Deleted 1 Cards
+Deleted 2 Users
+Successfully reset benchmark data.
+=== Run 2/5 ===
+
+> benchmark-cancellation-refund@1.0.0 seed:refund
+> BENCHMARK_MODE=true ts-node seeders/seed-refund.ts
+
+Refund seed written to results/raw/refund-seed.json
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/refund/refund-correctness.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: First refund request returns 201 (got 201)  source=console
+INFO[0000] First refund: status=201                      source=console
+INFO[0000] ✓ PASS: Worker processed first refund within timeout  source=console
+INFO[0000] ✓ PASS: Second refund request returns 400 (got 400)  source=console
+INFO[0000] ✓ PASS: Second refund message is 'Refund already processed'  source=console
+INFO[0000] Second refund (duplicate): status=400         source=console
+INFO[0000] Duplicate processing test complete. Verify financial state using verify-card.ts, verify-wallet.ts, verify-ticket.ts  source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+    correctness_pass
+    ✓ 'count>0' count=4
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 4      10.668855/s
+
+    HTTP
+    http_req_duration..............: avg=54.81ms  min=7.9ms    med=8.37ms   max=148.16ms p(90)=120.2ms  p(95)=134.18ms
+      { expected_response:true }...: avg=148.16ms min=148.16ms med=148.16ms max=148.16ms p(90)=148.16ms p(95)=148.16ms
+    http_req_failed................: 66.66% 2 out of 3
+    http_reqs......................: 3      8.001641/s
+
+    EXECUTION
+    iteration_duration.............: avg=374.62ms min=374.62ms med=374.62ms max=374.62ms p(90)=374.62ms p(95)=374.62ms
+    iterations.....................: 1      2.667214/s
+
+    NETWORK
+    data_received..................: 952 B  2.5 kB/s
+    data_sent......................: 546 B  1.5 kB/s
+
+
+
+
+running (00m00.4s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  00m00.4s/10m0s  1/1 shared iters
+
+> benchmark-cancellation-refund@1.0.0 verify:refund
+> BENCHMARK_MODE=true ts-node verification/verify-refund.ts
+
+✓ Transaction is REFUND and canceled_at is set
+✓ Ticket was successfully deleted
+✗ EventSlot capacity is 11, expected 10.
+
+> benchmark-cancellation-refund@1.0.0 verify:card
+> BENCHMARK_MODE=true ts-node verification/verify-card.ts
+
+✗ User card undefined not found.
+
+> benchmark-cancellation-refund@1.0.0 verify:wallet
+> BENCHMARK_MODE=true ts-node verification/verify-wallet.ts
+
+Current Organiser Wallet Balance: 9900.000000000000000000000000000000
+✓ Wallet balance is non-negative
+
+> benchmark-cancellation-refund@1.0.0 reset
+> BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts
+
+Deleted 1 Transactions
+Deleted 0 TicketVerifications
+Deleted 0 Otps
+Deleted 0 Tickets
+Deleted 1 EventSlots
+Deleted 1 Events
+Deleted 1 JwtTokens
+Deleted 1 Wallets
+Deleted 1 Cards
+Deleted 2 Users
+Successfully reset benchmark data.
+=== Run 3/5 ===
+
+> benchmark-cancellation-refund@1.0.0 seed:refund
+> BENCHMARK_MODE=true ts-node seeders/seed-refund.ts
+
+Refund seed written to results/raw/refund-seed.json
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/refund/refund-correctness.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: First refund request returns 201 (got 201)  source=console
+INFO[0000] First refund: status=201                      source=console
+INFO[0000] ✓ PASS: Worker processed first refund within timeout  source=console
+INFO[0000] ✓ PASS: Second refund request returns 400 (got 400)  source=console
+INFO[0000] ✓ PASS: Second refund message is 'Refund already processed'  source=console
+INFO[0000] Second refund (duplicate): status=400         source=console
+INFO[0000] Duplicate processing test complete. Verify financial state using verify-card.ts, verify-wallet.ts, verify-ticket.ts  source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+    correctness_pass
+    ✓ 'count>0' count=4
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 4      17.792467/s
+
+    HTTP
+    http_req_duration..............: avg=5.82ms   min=5.17ms   med=5.42ms   max=6.87ms   p(90)=6.58ms   p(95)=6.73ms
+      { expected_response:true }...: avg=5.17ms   min=5.17ms   med=5.17ms   max=5.17ms   p(90)=5.17ms   p(95)=5.17ms
+    http_req_failed................: 66.66% 2 out of 3
+    http_reqs......................: 3      13.34435/s
+
+    EXECUTION
+    iteration_duration.............: avg=224.57ms min=224.57ms med=224.57ms max=224.57ms p(90)=224.57ms p(95)=224.57ms
+    iterations.....................: 1      4.448117/s
+
+    NETWORK
+    data_received..................: 952 B  4.2 kB/s
+    data_sent......................: 546 B  2.4 kB/s
+
+
+
+
+running (00m00.2s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  00m00.2s/10m0s  1/1 shared iters
+
+> benchmark-cancellation-refund@1.0.0 verify:refund
+> BENCHMARK_MODE=true ts-node verification/verify-refund.ts
+
+✓ Transaction is REFUND and canceled_at is set
+✓ Ticket was successfully deleted
+✗ EventSlot capacity is 11, expected 10.
+
+> benchmark-cancellation-refund@1.0.0 verify:card
+> BENCHMARK_MODE=true ts-node verification/verify-card.ts
+
+✗ User card undefined not found.
+
+> benchmark-cancellation-refund@1.0.0 verify:wallet
+> BENCHMARK_MODE=true ts-node verification/verify-wallet.ts
+
+Current Organiser Wallet Balance: 9900.000000000000000000000000000000
+✓ Wallet balance is non-negative
+
+> benchmark-cancellation-refund@1.0.0 reset
+> BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts
+
+Deleted 1 Transactions
+Deleted 0 TicketVerifications
+Deleted 0 Otps
+Deleted 0 Tickets
+Deleted 1 EventSlots
+Deleted 1 Events
+Deleted 1 JwtTokens
+Deleted 1 Wallets
+Deleted 1 Cards
+Deleted 2 Users
+Successfully reset benchmark data.
+=== Run 4/5 ===
+
+> benchmark-cancellation-refund@1.0.0 seed:refund
+> BENCHMARK_MODE=true ts-node seeders/seed-refund.ts
+
+Refund seed written to results/raw/refund-seed.json
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/refund/refund-correctness.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: First refund request returns 201 (got 201)  source=console
+INFO[0000] First refund: status=201                      source=console
+INFO[0000] ✓ PASS: Worker processed first refund within timeout  source=console
+INFO[0000] ✓ PASS: Second refund request returns 400 (got 400)  source=console
+INFO[0000] ✓ PASS: Second refund message is 'Refund already processed'  source=console
+INFO[0000] Second refund (duplicate): status=400         source=console
+INFO[0000] Duplicate processing test complete. Verify financial state using verify-card.ts, verify-wallet.ts, verify-ticket.ts  source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+    correctness_pass
+    ✓ 'count>0' count=4
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 4      17.716413/s
+
+    HTTP
+    http_req_duration..............: avg=5.9ms    min=3.67ms   med=4.98ms   max=9.05ms   p(90)=8.23ms   p(95)=8.64ms
+      { expected_response:true }...: avg=9.05ms   min=9.05ms   med=9.05ms   max=9.05ms   p(90)=9.05ms   p(95)=9.05ms
+    http_req_failed................: 66.66% 2 out of 3
+    http_reqs......................: 3      13.28731/s
+
+    EXECUTION
+    iteration_duration.............: avg=225.37ms min=225.37ms med=225.37ms max=225.37ms p(90)=225.37ms p(95)=225.37ms
+    iterations.....................: 1      4.429103/s
+
+    NETWORK
+    data_received..................: 952 B  4.2 kB/s
+    data_sent......................: 546 B  2.4 kB/s
+
+
+
+
+running (00m00.2s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  00m00.2s/10m0s  1/1 shared iters
+
+> benchmark-cancellation-refund@1.0.0 verify:refund
+> BENCHMARK_MODE=true ts-node verification/verify-refund.ts
+
+✓ Transaction is REFUND and canceled_at is set
+✓ Ticket was successfully deleted
+✗ EventSlot capacity is 11, expected 10.
+
+> benchmark-cancellation-refund@1.0.0 verify:card
+> BENCHMARK_MODE=true ts-node verification/verify-card.ts
+
+✗ User card undefined not found.
+
+> benchmark-cancellation-refund@1.0.0 verify:wallet
+> BENCHMARK_MODE=true ts-node verification/verify-wallet.ts
+
+Current Organiser Wallet Balance: 9900.000000000000000000000000000000
+✓ Wallet balance is non-negative
+
+> benchmark-cancellation-refund@1.0.0 reset
+> BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts
+
+Deleted 1 Transactions
+Deleted 0 TicketVerifications
+Deleted 0 Otps
+Deleted 0 Tickets
+Deleted 1 EventSlots
+Deleted 1 Events
+Deleted 1 JwtTokens
+Deleted 1 Wallets
+Deleted 1 Cards
+Deleted 2 Users
+Successfully reset benchmark data.
+=== Run 5/5 ===
+
+> benchmark-cancellation-refund@1.0.0 seed:refund
+> BENCHMARK_MODE=true ts-node seeders/seed-refund.ts
+
+Refund seed written to results/raw/refund-seed.json
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/refund/refund-correctness.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+INFO[0000] ✓ PASS: First refund request returns 201 (got 201)  source=console
+INFO[0000] First refund: status=201                      source=console
+INFO[0000] ✓ PASS: Worker processed first refund within timeout  source=console
+INFO[0000] ✓ PASS: Second refund request returns 400 (got 400)  source=console
+INFO[0000] ✓ PASS: Second refund message is 'Refund already processed'  source=console
+INFO[0000] Second refund (duplicate): status=400         source=console
+INFO[0000] Duplicate processing test complete. Verify financial state using verify-card.ts, verify-wallet.ts, verify-ticket.ts  source=console
+
+
+  █ THRESHOLDS
+
+    correctness_fail
+    ✓ 'count==0' count=0
+
+    correctness_pass
+    ✓ 'count>0' count=4
+
+
+  █ TOTAL RESULTS
+
+    CUSTOM
+    correctness_fail...............: 0      0/s
+    correctness_pass...............: 4      17.237168/s
+
+    HTTP
+    http_req_duration..............: avg=8.88ms   min=6.63ms   med=9.8ms    max=10.2ms   p(90)=10.12ms  p(95)=10.16ms
+      { expected_response:true }...: avg=10.2ms   min=10.2ms   med=10.2ms   max=10.2ms   p(90)=10.2ms   p(95)=10.2ms
+    http_req_failed................: 66.66% 2 out of 3
+    http_reqs......................: 3      12.927876/s
+
+    EXECUTION
+    iteration_duration.............: avg=231.82ms min=231.82ms med=231.82ms max=231.82ms p(90)=231.82ms p(95)=231.82ms
+    iterations.....................: 1      4.309292/s
+
+    NETWORK
+    data_received..................: 952 B  4.1 kB/s
+    data_sent......................: 546 B  2.4 kB/s
+
+
+
+
+running (00m00.2s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  00m00.2s/10m0s  1/1 shared iters
+
+> benchmark-cancellation-refund@1.0.0 verify:refund
+> BENCHMARK_MODE=true ts-node verification/verify-refund.ts
+
+✓ Transaction is REFUND and canceled_at is set
+✓ Ticket was successfully deleted
+✗ EventSlot capacity is 11, expected 10.
+
+> benchmark-cancellation-refund@1.0.0 verify:card
+> BENCHMARK_MODE=true ts-node verification/verify-card.ts
+
+✗ User card undefined not found.
+
+> benchmark-cancellation-refund@1.0.0 verify:wallet
+> BENCHMARK_MODE=true ts-node verification/verify-wallet.ts
+
+Current Organiser Wallet Balance: 9900.000000000000000000000000000000
+✓ Wallet balance is non-negative
+
+> benchmark-cancellation-refund@1.0.0 reset
+> BENCHMARK_MODE=true ts-node seeders/reset-benchmark.ts
+
+Deleted 1 Transactions
+Deleted 0 TicketVerifications
+Deleted 0 Otps
+Deleted 0 Tickets
+Deleted 1 EventSlots
+Deleted 1 Events
+Deleted 1 JwtTokens
+Deleted 1 Wallets
+Deleted 1 Cards
+Deleted 2 Users
+Successfully reset benchmark data.

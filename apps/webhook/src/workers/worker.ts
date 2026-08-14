@@ -3,12 +3,14 @@ import db, { type Prisma, type TransactionType } from "@repo/db";
 import Decimal from "decimal.js";
 
 const _client = redisCache;
-const Queue_name = "transactions:pending";
-const Process_Queue = "transactions:processing";
-const Failed_Queue = "transactions:failed";
+
+const QUEUE_NAME = "transactions:pending";
+const PROCESS_QUEUE = "transactions:processing";
+const FAILED_QUEUE = "transactions:failed";
+
 const MAX_ATTEMPTS = 3;
 
-interface jobInterface {
+interface JobInterface {
     amount: string;
     cardId: string;
     token: string;
@@ -18,117 +20,262 @@ interface jobInterface {
     attempts?: number;
 }
 
-async function RedisStarter() {
+async function redisStarter(): Promise<void> {
     await initRedis();
 }
 
-RedisStarter();
-
-async function processJob() {
+async function processJob(): Promise<void> {
     while (true) {
-        const job = await _client.brPopLPush(Queue_name, Process_Queue, 0);
-        if (!job) continue;
-
-        let jobValue: jobInterface;
+        let job: string | null = null;
+        let jobValue: JobInterface | undefined;
 
         try {
-            jobValue = JSON.parse(job.toString());
-            jobValue.attempts = jobValue.attempts || 0;
+            job = (await _client.brPopLPush(
+                QUEUE_NAME,
+                PROCESS_QUEUE,
+                0,
+            ))?.toString() ?? null;
+
+            if (!job) {
+                continue;
+            }
+
+            jobValue = JSON.parse(job) as JobInterface;
+
+            jobValue.attempts = jobValue.attempts ?? 0;
+
+            validateJob(jobValue);
 
             switch (jobValue.type) {
                 case "DEPOSIT":
                     await depositMoney(jobValue);
                     break;
+
                 case "WITHDRAWAL":
                     await withdrawMoney(jobValue);
                     break;
+
                 case "REFUND":
                     await refundMoney(jobValue);
                     break;
+
                 case "PAYOUT":
                     await payoutMoney(jobValue);
                     break;
+
                 default:
-                    throw new Error(`Unknown job type: ${jobValue.type}`);
+                    throw new Error(
+                        `Unknown job type: ${jobValue.type}`,
+                    );
+            }
+            await _client.lRem(PROCESS_QUEUE, 1, job);
+        } catch (error) {
+            console.error("Transaction job failed:", error);
+            if (!jobValue || !job) {
+                if (job) {
+                    await _client.lRem(
+                        PROCESS_QUEUE,
+                        1,
+                        job,
+                    );
+                }
+
+                continue;
             }
 
-            await _client.lRem(Process_Queue, 1, job);
-        } catch (err) {
-            console.error(" Job failed:", err);
+            jobValue.attempts = (jobValue.attempts ?? 0) + 1;
 
-            if (jobValue) {
-                jobValue.attempts = (jobValue.attempts || 0) + 1;
+            try {
                 if (jobValue.attempts < MAX_ATTEMPTS) {
-                    const delay = 2 ** jobValue.attempts * 1000;
-                    await new Promise((res) => setTimeout(res, delay));
-                    await _client.lPush(Queue_name, JSON.stringify(jobValue));
-                } else {
-                    await _client.lPush(Failed_Queue, JSON.stringify(jobValue));
+                    const delay =
+                        2 ** jobValue.attempts * 1000;
 
-                    if (jobValue?.transactionId) {
-                        await db.transaction.update({
-                            data: {
-                                canceled_at: new Date().toISOString(),
-                                type: "CANCEL",
-                            },
+                    await new Promise<void>((resolve) => {
+                        setTimeout(resolve, delay);
+                    });
+
+                    await _client.lPush(
+                        QUEUE_NAME,
+                        JSON.stringify(jobValue),
+                    );
+                } else {
+                    await _client.lPush(
+                        FAILED_QUEUE,
+                        JSON.stringify(jobValue),
+                    );
+
+                    if (jobValue.transactionId) {
+                        await db.transaction.updateMany({
                             where: {
                                 id: jobValue.transactionId,
+                                type: {
+                                    not: "REFUND",
+                                },
+                            },
+                            data: {
+                                canceled_at: new Date(),
+                                type: "CANCEL",
                             },
                         });
                     }
                 }
+            } catch (queueError) {
+                console.error(
+                    "Failed to handle failed transaction job:",
+                    queueError,
+                );
             }
 
-            await _client.lRem(Process_Queue, 1, job);
+            try {
+                await _client.lRem(
+                    PROCESS_QUEUE,
+                    1,
+                    job,
+                );
+            } catch (removeError) {
+                console.error(
+                    "Failed to remove job from processing queue:",
+                    removeError,
+                );
+            }
         }
     }
 }
 
-export async function depositMoney(job: jobInterface) {
-    try {
-        const depositAmount = new Decimal(job.amount);
-        const _result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.card.update({
-                data: {
-                    balance: {
-                        increment: depositAmount,
-                    },
-                },
-                where: {
-                    id: job.cardId,
-                },
-            });
+function validateJob(job: JobInterface): void {
+    if (!job.transactionId) {
+        throw new Error("transactionId is required");
+    }
 
-            await tx.transaction.update({
-                data: {
-                    type: "DEPOSIT",
-                },
-                where: {
-                    id: job.transactionId,
-                },
-            });
+    if (!job.cardId) {
+        throw new Error("cardId is required");
+    }
 
-            return {
-                message: "Deposit successful",
-            };
-        });
-    } catch (error) {
-        console.error("Internal error occured", error);
+    if (!job.userId) {
+        throw new Error("userId is required");
+    }
+
+    if (!job.amount) {
+        throw new Error("amount is required");
+    }
+
+    const amount = new Decimal(job.amount);
+
+    if (!amount.isFinite()) {
+        throw new Error("Invalid transaction amount");
+    }
+
+    if (amount.lessThanOrEqualTo(0)) {
+        throw new Error(
+            "Transaction amount must be greater than zero",
+        );
     }
 }
 
-export async function withdrawMoney(job: jobInterface) {
+export async function depositMoney(
+    job: JobInterface,
+): Promise<{ message: string }> {
     try {
-        const withdrawAmount = new Decimal(job.amount);
+        const depositAmount = new Decimal(job.amount);
+
+        if (
+            !depositAmount.isFinite() ||
+            depositAmount.lessThanOrEqualTo(0)
+        ) {
+            throw new Error("Invalid deposit amount");
+        }
 
         await db.$transaction(
             async (tx: Prisma.TransactionClient) => {
+
                 const card = await tx.card.findUnique({
                     where: {
                         id: job.cardId,
                     },
                     select: {
                         id: true,
+                        userId: true,
+                    },
+                });
+
+                if (!card) {
+                    throw new Error("Card not found");
+                }
+
+                if (card.userId !== job.userId) {
+                    throw new Error(
+                        "Card does not belong to this user",
+                    );
+                }
+
+                await tx.card.update({
+                    where: {
+                        id: card.id,
+                    },
+                    data: {
+                        balance: {
+                            increment: depositAmount.toFixed(2),
+                        },
+                    },
+                });
+
+                const transaction =
+                    await tx.transaction.updateMany({
+                        where: {
+                            id: job.transactionId,
+                            type: "Initiate",
+                        },
+                        data: {
+                            type: "DEPOSIT",
+                        },
+                    });
+
+                if (transaction.count !== 1) {
+                    throw new Error(
+                        "Deposit transaction is invalid or already processed",
+                    );
+                }
+            },
+        );
+
+        return {
+            message: "Deposit successful",
+        };
+    } catch (error) {
+        console.error(
+            "Internal error occurred during deposit:",
+            error,
+        );
+        throw error;
+    }
+}
+
+/**
+ * Withdraw money from a card.
+ */
+export async function withdrawMoney(
+    job: JobInterface,
+): Promise<{ message: string }> {
+    try {
+        const withdrawAmount = new Decimal(job.amount);
+
+        if (
+            !withdrawAmount.isFinite() ||
+            withdrawAmount.lessThanOrEqualTo(0)
+        ) {
+            throw new Error("Invalid withdrawal amount");
+        }
+
+        await db.$transaction(
+            async (tx: Prisma.TransactionClient) => {
+
+                const card = await tx.card.findUnique({
+                    where: {
+                        id: job.cardId,
+                    },
+                    select: {
+                        id: true,
+                        userId: true,
                         balance: true,
                     },
                 });
@@ -137,31 +284,54 @@ export async function withdrawMoney(job: jobInterface) {
                     throw new Error("Card not found");
                 }
 
-                const currentBalance = new Decimal(card.balance);
+                if (card.userId !== job.userId) {
+                    throw new Error(
+                        "Card does not belong to this user",
+                    );
+                }
 
-                if (currentBalance.lessThan(withdrawAmount)) {
-                    throw new Error("Insufficient balance for withdrawal");
+                const currentBalance = new Decimal(
+                    card.balance,
+                );
+
+                if (
+                    currentBalance.lessThan(
+                        withdrawAmount,
+                    )
+                ) {
+                    throw new Error(
+                        "Insufficient balance for withdrawal",
+                    );
                 }
 
                 await tx.card.update({
                     where: {
-                        id: job.cardId,
+                        id: card.id,
                     },
                     data: {
                         balance: {
-                            decrement: withdrawAmount,
+                            decrement:
+                                withdrawAmount.toFixed(2),
                         },
                     },
                 });
 
-                await tx.transaction.update({
-                    where: {
-                        id: job.transactionId,
-                    },
-                    data: {
-                        type: "WITHDRAWAL",
-                    },
-                });
+                const transaction =
+                    await tx.transaction.updateMany({
+                        where: {
+                            id: job.transactionId,
+                            type: "Initiate",
+                        },
+                        data: {
+                            type: "WITHDRAWAL",
+                        },
+                    });
+
+                if (transaction.count !== 1) {
+                    throw new Error(
+                        "Withdrawal transaction is invalid or already processed",
+                    );
+                }
             },
         );
 
@@ -169,133 +339,197 @@ export async function withdrawMoney(job: jobInterface) {
             message: "Withdraw successful",
         };
     } catch (error) {
-        console.error("Internal error occurred during withdrawal:", error);
+        console.error(
+            "Internal error occurred during withdrawal:",
+            error,
+        );
 
         throw error;
     }
 }
 
-export async function payoutMoney(job: jobInterface) {
+export async function payoutMoney(
+    job: JobInterface,
+): Promise<{ message: string }> {
     try {
         const amount = new Decimal(job.amount);
-        await db.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.wallet.update({
-                data: {
-                    balance: {
-                        decrement: amount,
-                    },
-                    lastPayoutAt: new Date(Date.now()),
-                },
-                where: {
-                    userId: job.userId,
-                },
-            }),
-                await tx.card.update({
-                    data: {
-                        balance: {
-                            increment: amount,
-                        },
-                    },
+
+        if (
+            !amount.isFinite() ||
+            amount.lessThanOrEqualTo(0)
+        ) {
+            throw new Error("Invalid payout amount");
+        }
+
+        if (!job.token) {
+            throw new Error("Payout token is required");
+        }
+
+        await db.$transaction(
+            async (tx: Prisma.TransactionClient) => {
+                const wallet = await tx.wallet.findUnique({
                     where: {
-                        id: job.cardId,
-                        // userId: job.userId,
+                        userId: job.userId,
+                    },
+                    select: {
+                        id: true,
+                        userId: true,
+                        balance: true,
+                        status: true,
                     },
                 });
-            await tx.transaction.update({
-                data: {
-                    type: "PAYOUT",
-                },
-                where: {
-                    token: job.token,
-                },
-            });
-        });
+
+                if (!wallet) {
+                    throw new Error("Wallet not found");
+                }
+
+                if (wallet.status !== "active") {
+                    throw new Error(
+                        "Wallet is not active",
+                    );
+                }
+
+                const walletBalance = new Decimal(
+                    wallet.balance,
+                );
+
+                if (
+                    walletBalance.lessThan(amount)
+                ) {
+                    throw new Error(
+                        "Insufficient wallet balance",
+                    );
+                }
+
+                const card = await tx.card.findUnique({
+                    where: {
+                        id: job.cardId,
+                    },
+                    select: {
+                        id: true,
+                        userId: true,
+                    },
+                });
+
+                if (!card) {
+                    throw new Error("Card not found");
+                }
+
+                if (card.userId !== job.userId) {
+                    throw new Error(
+                        "Card does not belong to this user",
+                    );
+                }
+
+                await tx.wallet.update({
+                    where: {
+                        id: wallet.id,
+                    },
+                    data: {
+                        balance: {
+                            decrement: amount.toFixed(2),
+                        },
+                        lastPayoutAt: new Date(),
+                    },
+                });
+
+                await tx.card.update({
+                    where: {
+                        id: card.id,
+                    },
+                    data: {
+                        balance: {
+                            increment: amount.toFixed(2),
+                        },
+                    },
+                });
+
+                const transaction =
+                    await tx.transaction.updateMany({
+                        where: {
+                            token: job.token,
+                            type: "Initiate",
+                        },
+                        data: {
+                            type: "PAYOUT",
+                        },
+                    });
+
+                if (transaction.count !== 1) {
+                    throw new Error(
+                        "Payout transaction is invalid or already processed",
+                    );
+                }
+            },
+        );
+
         return {
             message: "Payout successful",
         };
     } catch (error) {
-        console.error("Internal error occured", error);
+        console.error(
+            "Internal error occurred during payout:",
+            error,
+        );
+
+        throw error;
     }
 }
 
-export async function refundMoney(job: jobInterface) {
+export async function refundMoney(
+    job: JobInterface,
+): Promise<{ message: string }> {
     try {
         const amount = new Decimal(job.amount);
-        const originalTransaction = await db.transaction.findUnique({
-            where: {
-                id: job.transactionId,
-            },
-            include: {
-                ticket: {
-                    select: {
-                        id: true,
-                        ticket_count: true,
-                        status: true,
-                        is_valid: true,
-                        eventSlot: {
-                            select: {
-                                id: true,
-                                event: {
-                                    select: {
-                                        organiserId: true,
+
+        if (
+            !amount.isFinite() ||
+            amount.lessThanOrEqualTo(0)
+        ) {
+            throw new Error("Invalid refund amount");
+        }
+
+        await db.$transaction(
+            async (tx: Prisma.TransactionClient) => {
+                const transaction =
+                    await tx.transaction.findUnique({
+                        where: {
+                            id: job.transactionId,
+                        },
+                        select: {
+                            id: true,
+                            type: true,
+                            canceled_at: true,
+                            amount: true,
+                            cardId: true,
+                            ticket_count: true,
+
+                            ticket: {
+                                select: {
+                                    id: true,
+                                    eventSlotId: true,
+
+                                    eventSlot: {
+                                        select: {
+                                            id: true,
+
+                                            event: {
+                                                select: {
+                                                    organiserId:
+                                                        true,
+                                                },
+                                            },
+                                        },
                                     },
                                 },
                             },
                         },
-                    },
-                },
-            },
-        });
-
-        if (!originalTransaction) {
-            throw new Error("Original transaction not found");
-        }
-
-        if (!originalTransaction.ticket) {
-            throw new Error("Original transaction ticket not found");
-        }
-
-        if (originalTransaction.type === "REFUND") {
-            throw new Error("Refund already processed");
-        }
-
-        if (originalTransaction.type !== "PURCHASE") {
-            throw new Error(
-                `Transaction cannot be refunded because its type is ${originalTransaction.type}`,
-            );
-        }
-
-        const organiserId =
-            originalTransaction.ticket.eventSlot.event.organiserId;
-
-        await db.$transaction(
-            async (tx: Prisma.TransactionClient) => {
-                const transaction = await tx.transaction.findUnique({
-                    where: {
-                        id: job.transactionId,
-                    },
-                    select: {
-                        id: true,
-                        type: true,
-                        canceled_at: true,
-                        amount: true,
-                        cardId: true,
-                        ticket_count: true,
-                        ticket: {
-                            select: {
-                                id: true,
-                                eventSlotId: true,
-                            },
-                        },
-                    },
-                });
+                    });
 
                 if (!transaction) {
-                    throw new Error("Original transaction not found");
-                }
-
-                if (transaction.type === "REFUND") {
-                    throw new Error("Refund already processed");
+                    throw new Error(
+                        "Original transaction not found",
+                    );
                 }
 
                 if (transaction.type !== "PURCHASE") {
@@ -305,45 +539,117 @@ export async function refundMoney(job: jobInterface) {
                 }
 
                 if (!transaction.ticket) {
-                    throw new Error("Ticket no longer exists");
+                    throw new Error(
+                        "Ticket no longer exists",
+                    );
                 }
 
-                const organiserWallet = await tx.wallet.findUnique({
-                    where: {
-                        userId: organiserId,
-                    },
-                    select: {
-                        id: true,
-                        balance: true,
-                    },
-                });
+                const organiserId =
+                    transaction.ticket.eventSlot.event
+                        .organiserId;
+
+                if (!organiserId) {
+                    throw new Error(
+                        "Organiser not found",
+                    );
+                }
+
+                const ticketCount =
+                    transaction.ticket_count ?? 1;
+
+                if (ticketCount <= 0) {
+                    throw new Error(
+                        "Invalid ticket count",
+                    );
+                }
+
+                const organiserWallet =
+                    await tx.wallet.findUnique({
+                        where: {
+                            userId: organiserId,
+                        },
+                        select: {
+                            id: true,
+                            balance: true,
+                            status: true,
+                        },
+                    });
 
                 if (!organiserWallet) {
-                    throw new Error("Organiser wallet not found");
+                    throw new Error(
+                        "Organiser wallet not found",
+                    );
                 }
 
-                const organiserBalance = new Decimal(
-                    organiserWallet.balance,
-                );
+                if (
+                    organiserWallet.status !==
+                    "active"
+                ) {
+                    throw new Error(
+                        "Organiser wallet is not active",
+                    );
+                }
 
-                if (organiserBalance.lessThan(amount)) {
+                const organiserBalance =
+                    new Decimal(
+                        organiserWallet.balance,
+                    );
+
+                if (
+                    organiserBalance.lessThan(amount)
+                ) {
                     throw new Error(
                         "Organiser does not have enough balance to process refund",
                     );
                 }
 
-                const card = await tx.card.findUnique({
-                    where: {
-                        id: job.cardId,
-                    },
-                    select: {
-                        id: true,
-                        balance: true,
-                    },
-                });
+                const card =
+                    await tx.card.findUnique({
+                        where: {
+                            id: job.cardId,
+                        },
+                        select: {
+                            id: true,
+                            userId: true,
+                            balance: true,
+                        },
+                    });
 
                 if (!card) {
-                    throw new Error("User card not found");
+                    throw new Error(
+                        "User card not found",
+                    );
+                }
+
+                if (
+                    card.userId !== job.userId
+                ) {
+                    throw new Error(
+                        "Card does not belong to this user",
+                    );
+                }
+
+                if (
+                    transaction.cardId !== card.id
+                ) {
+                    throw new Error(
+                        "Refund card does not match original transaction",
+                    );
+                }
+
+                const originalAmount =
+                    new Decimal(
+                        transaction.amount,
+                    );
+
+                if (
+                    amount.greaterThan(
+                        originalAmount,
+                    )
+                ) {
+                    throw new Error(
+                        "Refund amount cannot exceed original transaction amount",
+                    );
                 }
 
                 await tx.wallet.update({
@@ -352,43 +658,55 @@ export async function refundMoney(job: jobInterface) {
                     },
                     data: {
                         balance: {
-                            decrement: amount,
+                            decrement:
+                                amount.toFixed(2),
                         },
                     },
                 });
 
                 await tx.card.update({
                     where: {
-                        id: job.cardId,
+                        id: card.id,
                     },
                     data: {
                         balance: {
-                            increment: amount,
+                            increment:
+                                amount.toFixed(2),
                         },
                     },
                 });
 
-                await tx.transaction.update({
-                    where: {
-                        id: transaction.id,
-                    },
-                    data: {
-                        canceled_at: new Date(),
-                        type: "REFUND",
-                    },
-                });
+                const refundUpdate =
+                    await tx.transaction.updateMany({
+                        where: {
+                            id: transaction.id,
+                            type: "PURCHASE",
+                        },
+                        data: {
+                            canceled_at: new Date(),
+                            type: "REFUND",
+                        },
+                    });
+
+                if (
+                    refundUpdate.count !== 1
+                ) {
+                    throw new Error(
+                        "Refund was already processed",
+                    );
+                }
 
                 await tx.eventSlot.update({
                     where: {
-                        id: transaction.ticket.eventSlotId,
+                        id: transaction.ticket
+                            .eventSlotId,
                     },
                     data: {
                         capacity: {
-                            increment: transaction.ticket_count,
+                            increment: ticketCount,
                         },
                     },
                 });
-
                 await tx.ticket.delete({
                     where: {
                         id: transaction.ticket.id,
@@ -410,4 +728,26 @@ export async function refundMoney(job: jobInterface) {
     }
 }
 
-processJob();
+/**
+ * Start worker.
+ */
+async function main(): Promise<void> {
+    try {
+        await redisStarter();
+
+        console.log(
+            `Transaction worker started. Listening on ${QUEUE_NAME}`,
+        );
+
+        await processJob();
+    } catch (error) {
+        console.error(
+            "Transaction worker failed to start:",
+            error,
+        );
+
+        process.exit(1);
+    }
+}
+
+void main();
