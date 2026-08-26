@@ -61,7 +61,12 @@
         "start:tworker": "cd apps/webhook && npm run worker",
         "start:validator": "cd apps/validator && npm run dev",
         "start:webhook": "cd apps/webhook && npm run dev",
-        "start:worker": "cd apps/http && npm run worker"
+        "start:worker": "cd apps/http && npm run worker",
+        "test": "cd packages/tests && npm test",
+        "test:coverage": "cd packages/tests && npm run test:coverage",
+        "test:unit": "cd packages/tests && npm run test:unit",
+        "test:integration": "cd packages/tests && npm run test:integration",
+        "test:ci": "cd packages/tests && npm run test:ci"
     },
     "workspaces": [
         "apps/*",

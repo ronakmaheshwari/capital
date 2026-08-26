@@ -1,0 +1,21 @@
+Table — Aggregated Autocannon Performance (5 Runs)
+
+| Metric | Mean | Min | Max |
+|---|---|---|---|
+| **p50 latency** | 46.60 ms | 32.00 | 64.00 |
+| **p90 latency** | 96.80 ms | 62.00 | 142.00 |
+| **p95 latency** | NaN ms | NaN | NaN |
+| **p97.5 latency** | 229.60 ms | 87.00 | 398.00 |
+| **p99 latency** | 417.20 ms | 102.00 | 551.00 |
+| **Average latency** | 71.86 ms | 37.44 | 106.58 |
+| **Minimum latency** | 6.80 ms | 2.00 | 13.00 |
+| **Maximum latency** | 2163.80 ms | 193.00 | 5589.00 |
+| **Requests/sec** | 362.86  | 214.29 | 600.00 |
+| **Throughput (MB/s)** | 44.77  | 26.44 | 74.04 |
+
+Raw values per run:
+Run 1: p50=55 ms, p99=525 ms, avg=80.6 ms
+Run 2: p50=32 ms, p99=102 ms, avg=37.44 ms
+Run 3: p50=32 ms, p99=369 ms, avg=67.89 ms
+Run 4: p50=64 ms, p99=551 ms, avg=106.58 ms
+Run 5: p50=50 ms, p99=539 ms, avg=66.79 ms

@@ -1,0 +1,63 @@
+ k6 run dist/event_stress.test.js
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_stress.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5000 max VUs, 4m50s max duration (incl. graceful stop):
+              * stress: Up to 5000 looping VUs for 4m20s over 13 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✗ 'p(50)<200' p(50)=892.9ms
+    ✗ 'p(95)<800' p(95)=21.83s
+    ✗ 'p(99)<1000' p(99)=33.3s
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.54%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 79543  283.33888/s
+    checks_succeeded...: 99.45% 79113 out of 79543
+    checks_failed......: 0.54%  430 out of 79543
+
+    ✗ 200 OK
+      ↳  99% — ✓ 79113 / ✗ 430
+
+    CUSTOM
+    event_list_latency.............: avg=3.26s min=10.67ms med=892.9ms  max=50.44s p(90)=7.77s p(95)=21.83s
+
+    HTTP
+    http_req_duration..............: avg=3.26s min=10.67ms med=892.9ms  max=50.44s p(90)=7.77s p(95)=21.83s
+      { expected_response:true }...: avg=3.13s min=10.67ms med=887.76ms max=50.44s p(90)=7.13s p(95)=20.97s
+    http_req_failed................: 0.54%  430 out of 79543
+    http_reqs......................: 79543  283.33888/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.26s min=10.84ms med=893.29ms max=50.45s p(90)=7.78s p(95)=21.83s
+    iterations.....................: 79543  283.33888/s
+    vus............................: 295    min=0            max=4999
+    vus_max........................: 5000   min=737          max=5000
+
+    NETWORK
+    data_received..................: 11 GB  40 MB/s
+    data_sent......................: 6.6 MB 24 kB/s
+
+
+
+
+running (4m40.7s), 0000/5000 VUs, 79543 complete and 0 interrupted iterations
+stress ✓ [======================================] 0000/5000 VUs  4m20s
+ERRO[0290] thresholds on metrics 'event_list_latency' have been crossed 

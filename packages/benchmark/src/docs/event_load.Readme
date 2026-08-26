@@ -1,0 +1,61 @@
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_load.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 2500 max VUs, 4m30s max duration (incl. graceful stop):
+              * load: Up to 2500 looping VUs for 4m0s over 8 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✗ 'p(50)<200' p(50)=1.15s
+    ✗ 'p(95)<800' p(95)=13.74s
+    ✗ 'p(99)<1000' p(99)=19.1s
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 63422   250.542349/s
+    checks_succeeded...: 100.00% 63422 out of 63422
+    checks_failed......: 0.00%   0 out of 63422
+
+    ✓ 200 OK
+    ✓ events present
+
+    CUSTOM
+    event_list_latency.............: avg=3.49s min=2.58ms med=1.15s max=30.28s p(90)=10.99s p(95)=13.74s
+
+    HTTP
+    http_req_duration..............: avg=3.49s min=2.58ms med=1.15s max=30.28s p(90)=10.99s p(95)=13.74s
+      { expected_response:true }...: avg=3.49s min=2.58ms med=1.15s max=30.28s p(90)=10.99s p(95)=13.74s
+    http_req_failed................: 0.00%  0 out of 31711
+    http_reqs......................: 31711  125.271174/s
+
+    EXECUTION
+    iteration_duration.............: avg=5.93s min=1s     med=2.87s max=34.05s p(90)=15.4s  p(95)=19.72s
+    iterations.....................: 31711  125.271174/s
+    vus............................: 403    min=10         max=2485
+    vus_max........................: 2500   min=2500       max=2500
+
+    NETWORK
+    data_received..................: 4.5 GB 18 MB/s
+    data_sent......................: 2.9 MB 12 kB/s
+
+
+
+
+running (4m13.1s), 0000/2500 VUs, 31711 complete and 0 interrupted iterations
+load ✓ [======================================] 0000/2500 VUs  4m0s

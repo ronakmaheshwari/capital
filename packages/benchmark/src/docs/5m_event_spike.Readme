@@ -1,0 +1,60 @@
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: dist/event_spike.test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5000 max VUs, 5m30s max duration (incl. graceful stop):
+              * spike: 1 iterations for each of 5000 VUs (maxDuration: 5m0s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    event_list_latency
+    ✗ 'p(50)<200' p(50)=9.1s
+    ✗ 'p(95)<800' p(95)=22.66s
+    ✗ 'p(99)<1000' p(99)=23.04s
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 5000    191.816665/s
+    checks_succeeded...: 100.00% 5000 out of 5000
+    checks_failed......: 0.00%   0 out of 5000
+
+    ✓ 200 OK
+
+    CUSTOM
+    event_list_latency.............: avg=10.72s min=1.25s med=9.1s  max=23.15s p(90)=22.26s p(95)=22.66s
+
+    HTTP
+    http_req_duration..............: avg=10.72s min=1.25s med=9.1s  max=23.15s p(90)=22.26s p(95)=22.66s
+      { expected_response:true }...: avg=10.72s min=1.25s med=9.1s  max=23.15s p(90)=22.26s p(95)=22.66s
+    http_req_failed................: 0.00%  0 out of 5000
+    http_reqs......................: 5000   191.816665/s
+
+    EXECUTION
+    iteration_duration.............: avg=11.11s min=1.62s med=9.41s max=23.28s p(90)=22.46s p(95)=22.78s
+    iterations.....................: 5000   191.816665/s
+    vus............................: 474    min=0         max=5000
+    vus_max........................: 5000   min=3614      max=5000
+
+    NETWORK
+    data_received..................: 703 MB 27 MB/s
+    data_sent......................: 415 kB 16 kB/s
+
+
+
+
+running (0m26.1s), 0000/5000 VUs, 5000 complete and 0 interrupted iterations
+spike ✓ [======================================] 5000 VUs  0m26.0s/5m0s  5000/5000 iters, 1 per VU

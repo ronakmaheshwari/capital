@@ -15,6 +15,14 @@
                 "!.next/cache/**"
             ]
         },
+        "test": {
+            "dependsOn": [
+                "^build"
+            ],
+            "outputs": [
+                "coverage/**"
+            ]
+        },
         "check-types": {
             "dependsOn": [
                 "^check-types"
