@@ -19,7 +19,7 @@ process.env.RESEND_API_KEY = "re_test_fake_key";
 process.env.RESEND_EMAIL_DOMAIN = "test@example.com";
 
 // Mock @repo/notifications so we don't pull in the real email module at import time
-jest.mock("../../../../notifications/src/index", () => ({
+jest.mock("../../../notifications/src/index", () => ({
     AlphanumericOTP: jest.fn((len: number) => "X".repeat(len)),
     AlphabeticOTP: jest.fn((len: number) => "A".repeat(len)),
     NumericOTP: jest.fn((len: number) => Number("1".repeat(len))),

@@ -15,7 +15,7 @@ import {
     AlphabeticOTP,
     AlphanumericOTP,
     NumericOTP,
-} from "../../../../notifications/src/utils/otpGenerator";
+} from "../../../notifications/src/utils/otpGenerator";
 
 describe("OTP Generator – @repo/notifications", () => {
     // ─────────────────────────────────────────────────────────────────────────
